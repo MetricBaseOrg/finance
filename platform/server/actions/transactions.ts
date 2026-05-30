@@ -7,6 +7,7 @@ import { db } from "@/server/db";
 import { requireMembership } from "@/server/workspace";
 import { logAudit } from "@/server/audit";
 import { getFxRate } from "@/server/fx/provider";
+import { notifyApprovers } from "@/lib/finance/notify-approvers";
 
 const baseSchema = z.object({
   date: z.coerce.date(),
@@ -25,7 +26,11 @@ export async function createTransaction(
   _prev: TxnActionState | undefined,
   formData: FormData,
 ): Promise<TxnActionState> {
-  const { user, workspace } = await requireMembership(slug);
+  const { user, workspace, membership } = await requireMembership(slug);
+  if (membership.role === "VIEWER") {
+    return { error: "Your role does not permit recording transactions." };
+  }
+  const status = membership.role === "MEMBER" ? "PENDING" : "POSTED";
   const parsed = baseSchema.safeParse({
     date: formData.get("date"),
     type: formData.get("type"),
@@ -60,9 +65,6 @@ export async function createTransaction(
     if (!counter) return { error: "Destination account not found." };
   }
 
-  // INCOME/EXPENSE: amount is in primary.currency
-  // TRANSFER: amount is debited from primary in primary.currency
-  // FX rate: convert primary.currency → workspace.baseCurrency on `date`
   let fxRate: Decimal;
   try {
     fxRate = await getFxRate(primary.currency, workspace.baseCurrency, input.date);
@@ -72,21 +74,23 @@ export async function createTransaction(
 
   const amount = new Decimal(input.amount);
   const baseAmount = amount.times(fxRate);
+  const detail = input.type + " " + amount.toString() + " " + primary.currency;
 
   const created = await db.transaction.create({
     data: {
       organizationId: workspace.id,
       finAccountId: primary.id,
       counterAccountId: counter?.id,
-      categoryId:
-        input.type === "TRANSFER" ? null : input.categoryId || null,
+      categoryId: input.type === "TRANSFER" ? null : input.categoryId || null,
       date: input.date,
       amount: amount.toString(),
       currency: primary.currency,
       fxRate: fxRate.toString(),
       baseAmount: baseAmount.toString(),
       type: input.type,
+      status: status,
       memo: input.memo || null,
+      createdById: user.id,
     },
   });
 
@@ -96,15 +100,27 @@ export async function createTransaction(
     action: "CREATE",
     entityType: "TRANSACTION",
     entityId: created.id,
-    summary: `${input.type} ${amount.toString()} ${primary.currency}`,
+    summary: detail,
   });
-  revalidatePath(`/finance/transactions`);
-  revalidatePath(`/finance/dashboard`);
+  notifyApprovers({
+    organizationId: workspace.id,
+    slug,
+    actorId: user.id,
+    actorName: user.name || user.email || "A member",
+    detail: detail,
+    txType: input.type,
+    memo: input.memo || undefined,
+  }).catch(console.error);
+  revalidatePath("/finance/transactions");
+  revalidatePath("/finance/dashboard");
   return {};
 }
 
 export async function deleteTransaction(slug: string, id: string) {
-  const { user, workspace } = await requireMembership(slug);
+  const { user, workspace, membership } = await requireMembership(slug);
+  if (membership.role === "VIEWER" || membership.role === "MEMBER") {
+    return { error: "Your role does not permit deleting transactions." };
+  }
   await db.transaction.deleteMany({
     where: { id, organizationId: workspace.id },
   });
@@ -116,8 +132,9 @@ export async function deleteTransaction(slug: string, id: string) {
     entityId: id,
     summary: "Deleted transaction",
   });
-  revalidatePath(`/finance/transactions`);
-  revalidatePath(`/finance/dashboard`);
+  revalidatePath("/finance/transactions");
+  revalidatePath("/finance/dashboard");
+  return {};
 }
 
 export async function updateTransaction(
@@ -126,7 +143,10 @@ export async function updateTransaction(
   _prev: TxnActionState | undefined,
   formData: FormData,
 ): Promise<TxnActionState> {
-  const { user, workspace } = await requireMembership(slug);
+  const { user, workspace, membership } = await requireMembership(slug);
+  if (membership.role === "VIEWER") {
+    return { error: "Your role does not permit editing transactions." };
+  }
   const existing = await db.transaction.findFirst({
     where: { id, organizationId: workspace.id },
   });
@@ -175,6 +195,8 @@ export async function updateTransaction(
 
   const amount = new Decimal(input.amount);
   const baseAmount = amount.times(fxRate);
+  const newStatus = membership.role === "MEMBER" ? "PENDING" : existing.status;
+  const detail = input.type + " " + amount.toString() + " " + primary.currency;
 
   await db.transaction.update({
     where: { id },
@@ -188,6 +210,7 @@ export async function updateTransaction(
       fxRate: fxRate.toString(),
       baseAmount: baseAmount.toString(),
       type: input.type,
+      status: newStatus,
       memo: input.memo || null,
     },
   });
@@ -198,14 +221,23 @@ export async function updateTransaction(
     action: "UPDATE",
     entityType: "TRANSACTION",
     entityId: id,
-    summary: `Updated transaction (${input.type} ${amount.toString()} ${primary.currency})`,
+    summary: "Updated transaction (" + detail + ")",
   });
-  revalidatePath(`/finance/transactions`);
-  revalidatePath(`/finance/dashboard`);
+  if (newStatus === "PENDING" && existing.status !== "PENDING") {
+    notifyApprovers({
+      organizationId: workspace.id,
+      slug,
+      actorId: user.id,
+      actorName: user.name || user.email || "A member",
+      detail: detail,
+      txType: input.type,
+      memo: input.memo || undefined,
+    }).catch(console.error);
+  }
+  revalidatePath("/finance/transactions");
+  revalidatePath("/finance/dashboard");
   return {};
 }
-
-// ── CSV Import ────────────────────────────────────────────────────────────────
 
 export type ImportResult = { imported: number; errors: string[] };
 
@@ -269,16 +301,16 @@ export async function importTransactions(
     const { date, type, account, amount, memo, category, counter_account } = row;
 
     if (!date || !type || !account || !amount) {
-      errors.push(`Row ${rowNum}: missing required field (date, type, account, amount).`);
+      errors.push("Row " + rowNum + ": missing required field (date, type, account, amount).");
       continue;
     }
 
     const parsedDate = new Date(date);
-    if (isNaN(parsedDate.getTime())) { errors.push(`Row ${rowNum}: invalid date "${date}".`); continue; }
+    if (isNaN(parsedDate.getTime())) { errors.push("Row " + rowNum + ": invalid date."); continue; }
 
     const txnType = type.trim().toUpperCase();
     if (!["INCOME", "EXPENSE", "TRANSFER"].includes(txnType)) {
-      errors.push(`Row ${rowNum}: type must be INCOME, EXPENSE, or TRANSFER.`);
+      errors.push("Row " + rowNum + ": type must be INCOME, EXPENSE, or TRANSFER.");
       continue;
     }
 
@@ -298,13 +330,13 @@ export async function importTransactions(
 
     const parsedAmount = parseFloat(amount);
     if (isNaN(parsedAmount) || parsedAmount <= 0) {
-      errors.push(`Row ${rowNum}: amount must be a positive number.`);
+      errors.push("Row " + rowNum + ": amount must be a positive number.");
       continue;
     }
 
     let counterId: string | null = null;
     if (txnType === "TRANSFER") {
-      if (!counter_account) { errors.push(`Row ${rowNum}: TRANSFER requires counter_account.`); continue; }
+      if (!counter_account) { errors.push("Row " + rowNum + ": TRANSFER requires counter_account."); continue; }
       let counter = acctByName.get(counter_account.toLowerCase());
       if (!counter) {
         counter = await db.finAccount.create({
@@ -318,7 +350,7 @@ export async function importTransactions(
         });
         acctByName.set(counter_account.toLowerCase(), counter);
       }
-      if (counter.id === primary.id) { errors.push(`Row ${rowNum}: source and destination must differ.`); continue; }
+      if (counter.id === primary.id) { errors.push("Row " + rowNum + ": source and destination must differ."); continue; }
       counterId = counter.id;
     }
 
@@ -343,7 +375,7 @@ export async function importTransactions(
     try {
       fxRate = await getFxRate(primary.currency, workspace.baseCurrency, parsedDate);
     } catch {
-      errors.push(`Row ${rowNum}: FX rate unavailable for ${primary.currency}→${workspace.baseCurrency} on ${date}.`);
+      errors.push("Row " + rowNum + ": FX rate unavailable.");
       continue;
     }
 
@@ -367,9 +399,65 @@ export async function importTransactions(
   }
 
   if (imported > 0) {
-    revalidatePath(`/finance/transactions`);
-    revalidatePath(`/finance/dashboard`);
+    revalidatePath("/finance/transactions");
+    revalidatePath("/finance/dashboard");
   }
 
   return { imported, errors };
+}
+
+export async function approveTransaction(slug: string, id: string) {
+  const { user, workspace, membership } = await requireMembership(slug);
+  if (membership.role !== "OWNER" && membership.role !== "ADMIN") {
+    return { error: "Only owners and admins can approve transactions." };
+  }
+  const txn = await db.transaction.findFirst({
+    where: { id, organizationId: workspace.id },
+  });
+  if (!txn) return { error: "Transaction not found." };
+  if (txn.status !== "PENDING") return { error: "Transaction is not pending approval." };
+
+  await db.transaction.update({
+    where: { id },
+    data: { status: "POSTED", approvedById: user.id, approvedAt: new Date() },
+  });
+  await logAudit({
+    organizationId: workspace.id,
+    userId: user.id,
+    action: "APPROVE",
+    entityType: "TRANSACTION",
+    entityId: id,
+    summary: "Approved " + txn.type + " " + txn.amount.toString() + " " + txn.currency,
+  });
+  revalidatePath("/finance/transactions");
+  revalidatePath("/finance/dashboard");
+  return {};
+}
+
+export async function rejectTransaction(slug: string, id: string) {
+  const { user, workspace, membership } = await requireMembership(slug);
+  if (membership.role !== "OWNER" && membership.role !== "ADMIN") {
+    return { error: "Only owners and admins can reject transactions." };
+  }
+  const txn = await db.transaction.findFirst({
+    where: { id, organizationId: workspace.id },
+  });
+  if (!txn) return { error: "Transaction not found." };
+  if (txn.status !== "PENDING") return { error: "Transaction is not pending approval." };
+
+  await db.transaction.update({
+    where: { id },
+    data: { status: "REJECTED", approvedById: user.id, approvedAt: new Date() },
+  });
+  await logAudit({
+    organizationId: workspace.id,
+    userId: user.id,
+    action: "REJECT",
+    entityType: "TRANSACTION",
+    entityId: id,
+    summary: "Rejected " + txn.type + " " + txn.amount.toString() + " " + txn.currency,
+  });
+  revalidatePath("/finance/transactions");
+  revalidatePath("/finance/dashboard");
+  return {};
 }

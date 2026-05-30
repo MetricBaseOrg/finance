@@ -1,10 +1,9 @@
 import { PrismaClient } from '@/app/generated/prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
 
-// Single pooled connection to Neon. On a long-running VPS node process a single
-// PrismaClient (cached on globalThis in dev to survive HMR) is correct.
 function createPrismaClient() {
-  const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL })
+  const url = process.env.DIRECT_URL || process.env.DATABASE_URL
+  const adapter = new PrismaPg({ connectionString: url })
   return new PrismaClient({ adapter })
 }
 

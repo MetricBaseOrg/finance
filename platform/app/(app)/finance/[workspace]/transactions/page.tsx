@@ -8,6 +8,7 @@ import { TransactionCreateForm } from "./TransactionCreateForm";
 import { TransactionRowActions } from "./TransactionRowActions";
 import { TransactionFilters } from "./TransactionFilters";
 import { ImportCsvSection } from "./ImportCsvSection";
+import { ApprovalActions } from "./ApprovalActions";
 
 const PAGE_SIZE = 50;
 
@@ -28,7 +29,8 @@ export default async function TransactionsPage({
 }) {
   const { workspace: slug } = await params;
   const sp = await searchParams;
-  const { workspace } = await requireMembership(slug);
+  const { workspace, membership } = await requireMembership(slug);
+  const canApprove = membership.role === "OWNER" || membership.role === "ADMIN";
 
   const [accounts, categories] = await Promise.all([
     db.finAccount.findMany({
@@ -77,9 +79,9 @@ export default async function TransactionsPage({
 
   const page = Math.max(1, Number(sp.page) || 1);
 
-  const [txns, total] = await Promise.all([
+  const [txns, total, pendingTxns] = await Promise.all([
     db.transaction.findMany({
-      where,
+      where: { ...where, status: "POSTED" },
       include: {
         finAccount: true,
         counterAccount: true,
@@ -89,7 +91,15 @@ export default async function TransactionsPage({
       take: PAGE_SIZE,
       skip: (page - 1) * PAGE_SIZE,
     }),
-    db.transaction.count({ where }),
+    db.transaction.count({ where: { ...where, status: "POSTED" } }),
+    canApprove
+      ? db.transaction.findMany({
+          where: { organizationId: workspace.id, status: "PENDING" },
+          include: { finAccount: true, counterAccount: true, category: true, createdBy: true },
+          orderBy: { createdAt: "desc" },
+          take: 20,
+        })
+      : Promise.resolve([]),
   ]);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -140,6 +150,48 @@ export default async function TransactionsPage({
         accounts={accounts.map((a) => ({ id: a.id, name: a.name }))}
         categories={categories.map((c) => ({ id: c.id, name: c.name, kind: c.kind }))}
       />
+
+      {canApprove && pendingTxns.length > 0 && (
+        <div className="mb-card">
+          <div className="px-4 py-3 border-b border-line flex items-center gap-2">
+            <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--color-down)]">
+              Pending Approval
+            </span>
+            <span className="font-mono text-[10px] text-gray-3">({pendingTxns.length})</span>
+          </div>
+          {pendingTxns.map((t) => {
+            const tone = t.type === "INCOME" ? "text-[var(--color-up)]" : t.type === "EXPENSE" ? "text-[var(--color-down)]" : "text-gray-1";
+            const sign = t.type === "INCOME" ? "+" : t.type === "EXPENSE" ? "−" : "↔";
+            return (
+              <div key={t.id} className="border-b border-line last:border-b-0 px-4 py-3 hover:bg-[var(--color-bg-hover)] transition-colors">
+                <div className="grid grid-cols-[100px_100px_1.6fr_1.2fr_140px_160px] px-0 py-0 items-center">
+                  <span className="font-mono text-xs text-gray-2">
+                    {t.date.toISOString().slice(0, 10)}
+                  </span>
+                  <span className={`font-mono text-xs ${tone}`}>{t.type}</span>
+                  <div className="flex flex-col">
+                    <span className="font-sans text-sm text-white">
+                      {t.memo || (t.category?.name ?? "—")}
+                    </span>
+                    <span className="font-mono text-[10px] text-gray-3 mt-0.5">
+                      by {t.createdBy?.name || t.createdBy?.email || "Unknown"}
+                    </span>
+                  </div>
+                  <span className="font-mono text-xs text-gray-2">
+                    {t.finAccount.name}
+                    {t.counterAccount ? ` → ${t.counterAccount.name}` : ""}
+                  </span>
+                  <span className={`mono text-sm ${tone}`}>
+                    {sign}{" "}
+                    <Money value={t.amount.toString()} currency={t.currency} />
+                  </span>
+                  <ApprovalActions slug={slug} id={t.id} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {txns.length === 0 ? (
         <BunEmpty

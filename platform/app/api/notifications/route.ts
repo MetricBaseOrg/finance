@@ -15,17 +15,55 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
   const unreadOnly = searchParams.get('unreadOnly') === 'true'
   const limit = Math.min(parseInt(searchParams.get('limit') || '50', 10) || 50, 200)
+  const userId = session.user.id
 
-  const [items, unreadCount] = await Promise.all([
+  const [taskItems, generalItems, unreadCount] = await Promise.all([
     prisma.taskNotification.findMany({
-      where: { userId: session.user.id, ...(unreadOnly && { read: false }) },
+      where: { userId, ...(unreadOnly && { read: false }) },
       orderBy: { createdAt: 'desc' },
       take: limit,
     }),
-    prisma.taskNotification.count({ where: { userId: session.user.id, read: false } }),
+    prisma.notification.findMany({
+      where: { userId, ...(unreadOnly && { readAt: null }) },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+    }),
+    Promise.all([
+      prisma.taskNotification.count({ where: { userId, read: false } }),
+      prisma.notification.count({ where: { userId, readAt: null } }),
+    ]).then(([a, b]) => a + b),
   ])
 
-  // Hydrate task and actor info so the UI doesn't need a second roundtrip
+  const taskNotifications = taskItems.map((i) => ({
+    id: i.id,
+    kind: i.kind,
+    taskId: i.taskId,
+    commentId: i.commentId,
+    actorId: i.actorId,
+    metadata: i.metadata,
+    read: i.read,
+    createdAt: i.createdAt.toISOString(),
+    module: 'projects' as const,
+    href: null as string | null,
+  }))
+
+  const generalNotifications = generalItems.map((i) => ({
+    id: i.id,
+    kind: `${i.module}.notification`,
+    taskId: i.taskId,
+    commentId: i.commentId,
+    actorId: i.actorId,
+    metadata: JSON.stringify({ title: i.title, body: i.body }),
+    read: i.readAt !== null,
+    createdAt: i.createdAt.toISOString(),
+    module: i.module,
+    href: i.href,
+  }))
+
+  const items = [...taskNotifications, ...generalNotifications]
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, limit)
+
   const taskIds = [...new Set(items.map(i => i.taskId).filter(Boolean) as string[])]
   const actorIds = [...new Set(items.map(i => i.actorId).filter(Boolean) as string[])]
 
@@ -59,7 +97,6 @@ export async function GET(req: Request) {
 
 /**
  * PATCH /api/notifications  body: { ids?: string[]; markAllRead?: boolean }
- * Marks the listed notifications (or all of the user's notifications) as read.
  */
 export async function PATCH(req: Request) {
   const session = await auth()
@@ -69,15 +106,27 @@ export async function PATCH(req: Request) {
   const userId = session.user.id
 
   if (markAllRead) {
-    await prisma.taskNotification.updateMany({
-      where: { userId, read: false },
-      data: { read: true },
-    })
+    await Promise.all([
+      prisma.taskNotification.updateMany({
+        where: { userId, read: false },
+        data: { read: true },
+      }),
+      prisma.notification.updateMany({
+        where: { userId, readAt: null },
+        data: { readAt: new Date() },
+      }),
+    ])
   } else if (Array.isArray(ids) && ids.length > 0) {
-    await prisma.taskNotification.updateMany({
-      where: { userId, id: { in: ids } },
-      data: { read: true },
-    })
+    await Promise.all([
+      prisma.taskNotification.updateMany({
+        where: { userId, id: { in: ids } },
+        data: { read: true },
+      }),
+      prisma.notification.updateMany({
+        where: { userId, id: { in: ids } },
+        data: { readAt: new Date() },
+      }),
+    ])
   }
 
   return NextResponse.json({ ok: true })

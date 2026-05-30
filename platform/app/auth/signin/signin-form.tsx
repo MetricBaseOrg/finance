@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { signIn } from 'next-auth/react'
 import '@/app/home/workspace.css'
 import { AppMark, Icon, type AppId } from '@/app/home/ui'
+import { ThemeToggle } from '@/components/ui/theme-toggle'
 
 const APPS: { id: AppId; name: string; sub: string }[] = [
   { id: 'probase', name: 'ProBase', sub: 'Projects' },
@@ -74,7 +75,10 @@ export function SignInForm() {
       </div>
 
       {/* Form */}
-      <div style={{ flex: '1 1 48%', minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 32, overflowY: 'auto' }}>
+      <div style={{ flex: '1 1 48%', minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 32, overflowY: 'auto', position: 'relative' }}>
+        <div style={{ position: 'absolute', top: 20, right: 20 }}>
+          <ThemeToggle className="ws-btn" />
+        </div>
         <div style={{ width: 'min(380px, 100%)' }}>
           <div style={{ marginBottom: 26 }}>
             <h2 style={{ fontSize: 23, fontWeight: 800, letterSpacing: '-0.025em', color: 'var(--mb-ink)', margin: 0 }}>Sign in</h2>

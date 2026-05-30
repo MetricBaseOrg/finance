@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Bell, BellDot, Check, AtSign, UserPlus, MessageSquare } from 'lucide-react'
+import { Bell, BellDot, Check, AtSign, UserPlus, MessageSquare, ArrowLeftRight } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { cn, getInitials } from '@/lib/utils'
 
@@ -15,6 +15,8 @@ interface Notification {
   metadata: string | null
   read: boolean
   createdAt: string
+  module?: string
+  href?: string | null
   task: { id: string; title: string; project: { id: string; name: string; color: string } } | null
   actor: { id: string; name?: string | null; email?: string | null; image?: string | null } | null
 }
@@ -23,6 +25,7 @@ const KIND_ICON: Record<string, React.ElementType> = {
   mention: AtSign,
   'task.assigned': UserPlus,
   'comment.added': MessageSquare,
+  'finance.notification': ArrowLeftRight,
 }
 
 const POLL_MS = 60_000 // 1 minute
@@ -167,7 +170,13 @@ export function NotificationBell({ className }: { className?: string }) {
         body: JSON.stringify({ ids: [n.id] }),
       }).catch(() => {})
     }
-    if (n.task) router.push(`/projects/${n.task.project.id}`)
+    if (n.href) {
+      router.push(n.href)
+    } else if (n.task) {
+      const q = new URLSearchParams({ task: n.task.id })
+      if (n.commentId) q.set('comment', n.commentId)
+      router.push(`/projects/${n.task.project.id}?${q.toString()}`)
+    }
   }
 
   return (
@@ -296,14 +305,16 @@ export function NotificationBell({ className }: { className?: string }) {
   )
 }
 
-function describeNotification(kind: string, meta: { preview?: string; taskTitle?: string; title?: string }): string {
+function describeNotification(kind: string, meta: { preview?: string; taskTitle?: string; title?: string; body?: string }): string {
   switch (kind) {
     case 'mention':
-      return meta.preview ? `mentioned you: “${meta.preview}”` : 'mentioned you in a comment'
+      return meta.preview ? `mentioned you: "${meta.preview}"` : 'mentioned you in a comment'
     case 'task.assigned':
-      return meta.title ? `assigned you to “${meta.title}”` : 'assigned a task to you'
+      return meta.title ? `assigned you to "${meta.title}"` : 'assigned a task to you'
     case 'comment.added':
-      return meta.preview ? `commented: “${meta.preview}”` : 'left a comment'
+      return meta.preview ? `commented: "${meta.preview}"` : 'left a comment'
+    case 'finance.notification':
+      return meta.body || meta.title || 'New notification'
     default:
       return kind
   }

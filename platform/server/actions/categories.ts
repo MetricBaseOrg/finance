@@ -14,7 +14,10 @@ export async function createCategory(
   _prev: CategoryActionState | undefined,
   formData: FormData,
 ): Promise<CategoryActionState> {
-  const { user, workspace } = await requireMembership(slug);
+  const { user, workspace, membership } = await requireMembership(slug);
+  if (membership.role === "VIEWER") {
+    return { error: "Your role does not permit creating categories." };
+  }
   const parsed = categorySchema.safeParse({
     name: formData.get("name"),
     kind: formData.get("kind"),
