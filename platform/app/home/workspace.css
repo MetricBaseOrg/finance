@@ -1,0 +1,260 @@
+/* ============================================================
+   apps.metricbase.org — Unified Workspace home design tokens.
+   Ported from the MetricBase Design System handoff bundle
+   (styles/tokens.css + workspace/workspace.css). Scoped under
+   .mb-root so it never touches the legacy module UIs.
+   ============================================================ */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+:root {
+  --mb-font-sans: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+  --mb-font-mono: var(--font-jetbrains), "JetBrains Mono", ui-monospace, monospace;
+
+  --mb-bg:        oklch(0.985 0.004 230);
+  --mb-surface:   #ffffff;
+  --mb-surface-2: oklch(0.975 0.005 230);
+  --mb-surface-3: oklch(0.96 0.006 230);
+  --mb-border:    oklch(0.92 0.008 230);
+  --mb-border-strong: oklch(0.85 0.012 230);
+  --mb-divider:   oklch(0.94 0.006 230);
+
+  --mb-ink:        oklch(0.22 0.02 240);
+  --mb-ink-2:      oklch(0.38 0.02 240);
+  --mb-ink-muted:  oklch(0.55 0.018 240);
+  --mb-ink-soft:   oklch(0.68 0.014 240);
+
+  --mb-brand:      oklch(0.38 0.09 235);
+  --mb-brand-2:    oklch(0.30 0.08 235);
+  --mb-brand-soft: oklch(0.94 0.025 235);
+  --mb-brand-ink:  oklch(0.28 0.07 235);
+
+  --mb-ok:   oklch(0.62 0.13 150);  --mb-ok-soft: oklch(0.94 0.04 150);  --mb-ok-ink: oklch(0.38 0.10 150);
+  --mb-warn: oklch(0.74 0.14 75);   --mb-warn-soft: oklch(0.95 0.05 80); --mb-warn-ink: oklch(0.45 0.10 65);
+  --mb-bad:  oklch(0.58 0.18 28);   --mb-bad-soft: oklch(0.95 0.04 28);  --mb-bad-ink: oklch(0.42 0.14 28);
+  --mb-info: oklch(0.55 0.12 250);  --mb-info-soft: oklch(0.95 0.03 250);
+
+  --mb-radius: 10px;
+  --mb-radius-sm: 6px;
+  --mb-radius-lg: 14px;
+  --mb-shadow-2: 0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 0 oklch(0.92 0.008 230);
+
+  /* App identity colors */
+  --c-metricbase: oklch(0.56 0.10 76);
+  --c-probase:    oklch(0.50 0.16 280);
+  --c-fieldflow:  oklch(0.52 0.10 196);
+  --c-ogtools:    oklch(0.57 0.14 42);
+
+  /* workspace chrome */
+  --ws-topbar-h: 56px;
+  --ws-maxw: 1320px;
+  --ws-gutter: 28px;
+  --ws-card-pad: 16px;
+  --ws-gap: 14px;
+}
+
+.mb-root, .mb-root * { box-sizing: border-box; }
+.mb-root {
+  font-family: var(--mb-font-sans);
+  color: var(--mb-ink);
+  background: var(--mb-bg);
+  -webkit-font-smoothing: antialiased;
+  font-size: 13px;
+  line-height: 1.4;
+  letter-spacing: -0.005em;
+  min-height: 100vh;
+}
+.dark .mb-root {
+  --mb-bg:        oklch(0.18 0.015 235);
+  --mb-surface:   oklch(0.22 0.018 235);
+  --mb-surface-2: oklch(0.25 0.018 235);
+  --mb-surface-3: oklch(0.28 0.020 235);
+  --mb-border:    oklch(0.32 0.020 235);
+  --mb-border-strong: oklch(0.40 0.024 235);
+  --mb-divider:   oklch(0.28 0.018 235);
+  --mb-ink:       oklch(0.96 0.006 230);
+  --mb-ink-2:     oklch(0.82 0.010 230);
+  --mb-ink-muted: oklch(0.65 0.012 230);
+  --mb-ink-soft:  oklch(0.50 0.014 230);
+  --grid-line:    rgba(255, 255, 255, 0.01);
+  /* brand family is owned by the per-app accent bridge below (not here) */
+  --c-metricbase: oklch(0.80 0.12 84);
+  --c-probase:    oklch(0.76 0.15 285);
+  --c-fieldflow:  oklch(0.76 0.11 192);
+  --c-ogtools:    oklch(0.76 0.13 46);
+}
+
+/* ── Per-app accent palettes → drive --mb-brand* per data-app subtree ────── */
+[data-app="metricbase"] { --app-brand: oklch(0.56 0.10 76);  --app-brand-2: oklch(0.48 0.09 76);  --app-soft: oklch(0.95 0.04 82);  --app-ink: oklch(0.44 0.08 72); }
+[data-app="probase"]    { --app-brand: oklch(0.50 0.16 280); --app-brand-2: oklch(0.42 0.14 280); --app-soft: oklch(0.95 0.04 285); --app-ink: oklch(0.42 0.13 280); }
+[data-app="fieldflow"]  { --app-brand: oklch(0.52 0.10 196); --app-brand-2: oklch(0.44 0.09 196); --app-soft: oklch(0.94 0.04 196); --app-ink: oklch(0.40 0.08 196); }
+[data-app="ogtools"]    { --app-brand: oklch(0.57 0.14 42);  --app-brand-2: oklch(0.49 0.13 42);  --app-soft: oklch(0.95 0.05 46);  --app-ink: oklch(0.46 0.12 40); }
+[data-app="workspace"]  { --app-brand: oklch(0.40 0.07 235); --app-brand-2: oklch(0.32 0.06 235); --app-soft: oklch(0.94 0.022 235); --app-ink: oklch(0.30 0.06 235); }
+.dark [data-app="metricbase"] { --app-brand: oklch(0.80 0.12 84);  --app-brand-2: oklch(0.72 0.11 84);  --app-soft: oklch(0.30 0.05 80);  --app-ink: oklch(0.86 0.10 84); }
+.dark [data-app="probase"]    { --app-brand: oklch(0.76 0.15 285); --app-brand-2: oklch(0.68 0.13 285); --app-soft: oklch(0.30 0.07 285); --app-ink: oklch(0.86 0.11 285); }
+.dark [data-app="fieldflow"]  { --app-brand: oklch(0.76 0.11 192); --app-brand-2: oklch(0.68 0.10 192); --app-soft: oklch(0.30 0.05 196); --app-ink: oklch(0.86 0.09 192); }
+.dark [data-app="ogtools"]    { --app-brand: oklch(0.76 0.13 46);  --app-brand-2: oklch(0.68 0.12 46);  --app-soft: oklch(0.30 0.06 42);  --app-ink: oklch(0.86 0.11 46); }
+.dark [data-app="workspace"]  { --app-brand: oklch(0.74 0.10 222); --app-brand-2: oklch(0.66 0.09 222); --app-soft: oklch(0.28 0.05 230); --app-ink: oklch(0.86 0.08 222); }
+[data-app] {
+  --mb-brand:      var(--app-brand);
+  --mb-brand-2:    var(--app-brand-2);
+  --mb-brand-soft: var(--app-soft);
+  --mb-brand-ink:  var(--app-ink);
+}
+
+/* Per-app grid line colors for the global .grid-bg overlay (uses :has() so the
+   fixed grid can adapt to the current app's design system) */
+html:has([data-app="metricbase"]) { --grid-line: rgba(201, 168, 76, 0.022); }
+html:has([data-app="probase"])    { --grid-line: rgba(180, 160, 255, 0.018); }
+html:has([data-app="fieldflow"])  { --grid-line: rgba(140, 210, 200, 0.018); }
+html:has([data-app="ogtools"])    { --grid-line: rgba(230, 190, 120, 0.02); }
+html:has([data-app="workspace"])  { --grid-line: rgba(255, 255, 255, 0.01); }
+
+.mb-num { font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+
+.ws-shell { width: 100%; min-height: 100vh; display: flex; flex-direction: column; background: var(--mb-bg); }
+.ws-page  { max-width: var(--ws-maxw); margin: 0 auto; padding: 26px var(--ws-gutter) 60px; }
+.ws-card  { background: var(--mb-surface); border: 1px solid var(--mb-border); border-radius: var(--mb-radius); box-shadow: var(--mb-shadow-2); }
+.ws-eyebrow {
+  font-family: var(--mb-font-mono); font-size: 10px; font-weight: 600;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--mb-ink-soft);
+}
+@keyframes ws-fade { from { transform: translateY(7px); opacity: .6 } to { transform: none; opacity: 1 } }
+.ws-fade { animation: ws-fade 0.34s cubic-bezier(0.4,0,0.2,1); }
+.ws-click { cursor: pointer; transition: background .15s, border-color .15s, box-shadow .15s; }
+.ws-lift:hover { border-color: var(--mb-border-strong); box-shadow: 0 4px 16px rgba(15,23,42,0.08); }
+.dark .mb-root .ws-lift:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.4); }
+.ws-btn { font-family: inherit; cursor: pointer; }
+.ws-row:hover { background: var(--mb-surface-2); }
+.ws-iconbtn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px; border: 1px solid var(--mb-border);
+  background: var(--mb-surface); color: var(--mb-ink-2); border-radius: 8px; cursor: pointer;
+  transition: background .15s, border-color .15s;
+}
+.ws-iconbtn:hover { background: var(--mb-surface-2); border-color: var(--mb-border-strong); }
+
+.ws-topbar {
+  height: var(--ws-topbar-h);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 var(--ws-gutter);
+  border-bottom: 1px solid var(--mb-border);
+  background: var(--mb-surface);
+  z-index: 30;
+}
+
+/* ── Legacy MetricBase token bridge ───────────────────────────────────────
+   Lets a legacy-styled module (Finance: dark/gold + Manrope + .mb-card/.eyebrow
+   /var(--mid)/var(--gold)…) adopt the workspace design simply by wrapping it in
+   .mb-root[data-app=…]. Re-points the old vars to the new --mb-* tokens + the
+   per-app accent, swaps fonts, and rounds the (sharp) legacy utility classes.
+   Field/Home don't use these vars, so this is inert for them. */
+.mb-root {
+  --black: var(--mb-bg);
+  --dark: var(--mb-surface);
+  --mid: var(--mb-surface);
+  --bg-elev: var(--mb-surface);
+  --bg-card: var(--mb-surface);
+  --bg-hover: var(--mb-surface-2);
+  --border: var(--mb-border);
+  --border-str: var(--mb-border-strong);
+  --line: var(--mb-border);
+  --line-strong: var(--mb-border-strong);
+  --muted: var(--mb-ink-soft);
+  --subtle: var(--mb-ink-muted);
+  --light: var(--mb-ink);
+  --white: var(--mb-ink);
+  --gray-1: var(--mb-ink);
+  --gray-2: var(--mb-ink-muted);
+  --gray-3: var(--mb-ink-soft);
+  --gray-4: var(--mb-divider);
+  --gold: var(--mb-brand);
+  --gold-bright: var(--mb-brand);
+  --gold-dim: var(--mb-brand-ink);
+  --up: var(--mb-ok);
+  --down: var(--mb-bad);
+  --font-sans: var(--mb-font-sans);
+  --font-mono: var(--mb-font-mono);
+}
+.mb-root .mb-card { border-radius: var(--mb-radius); box-shadow: var(--mb-shadow-2); }
+.mb-root .mb-card.gold-top { border-top: 2px solid var(--mb-brand); }
+.mb-root .mb-input, .mb-root .mb-select,
+.mb-root .btn, .mb-root .btn-gold, .mb-root .btn-ghost-gold,
+.mb-root .pill { border-radius: var(--mb-radius-sm); }
+.mb-root .btn-gold { color: #fff; font-weight: 600; }
+.mb-root .eyebrow { color: var(--mb-brand-ink); }
+.mb-root .eyebrow::before { background: var(--mb-brand); }
+
+/* ── Tailwind-scale bridge (for ProBase/Projects utilities) ───────────────
+   ProBase styles with bg-slate-*, text-gray-*, indigo accent + rounded-*.
+   Re-point those Tailwind color vars to the new tokens + restore rounded
+   corners. Slate/gray/radius are safe app-wide; indigo→accent is per-app. */
+.mb-root {
+  --color-slate-900: var(--mb-bg);
+  --color-slate-800: var(--mb-surface);
+  --color-slate-700: var(--mb-border);
+  --color-slate-600: var(--mb-border-strong);
+  --color-slate-500: var(--mb-ink-soft);
+  --color-slate-400: var(--mb-ink-muted);
+  --color-slate-300: var(--mb-ink-muted);
+  --color-slate-200: var(--mb-ink-2);
+  --color-slate-100: var(--mb-ink);
+  --color-slate-50:  var(--mb-surface-2);
+  --color-gray-50:  var(--mb-surface-2);
+  --color-gray-100: var(--mb-border);
+  --color-gray-200: var(--mb-border-strong);
+  --color-gray-300: var(--mb-ink-soft);
+  --color-gray-400: var(--mb-ink-soft);
+  --color-gray-500: var(--mb-ink-muted);
+  --color-gray-600: var(--mb-ink-muted);
+  --color-gray-700: var(--mb-ink-2);
+  --color-gray-800: var(--mb-ink);
+  --color-gray-900: var(--mb-ink);
+  --radius-md: 8px;
+  --radius-lg: var(--mb-radius);
+  --radius-xl: var(--mb-radius);
+  --radius-2xl: var(--mb-radius-lg);
+  --radius-3xl: 18px;
+}
+.mb-root[data-app="probase"] {
+  --color-indigo-50:  var(--mb-brand-soft);
+  --color-indigo-100: var(--mb-brand-soft);
+  --color-indigo-300: var(--mb-brand);
+  --color-indigo-400: var(--mb-brand);
+  --color-indigo-500: var(--mb-brand);
+  --color-indigo-600: var(--mb-brand);
+  --color-indigo-700: var(--mb-brand-2);
+}
+
+/* Hide the sign-in brand panel on narrow screens. */
+@media (max-width: 860px) { .ws-brandpanel { display: none !important; } }
+
+/* ── Small-screen overflow fixes ─────────────────────────────────────────── */
+/* Wide tables scroll inside their card instead of pushing the page width. */
+.ws-card:has(table) { overflow-x: auto; }
+
+/* Prevent wide content (tables, grids, etc.) from causing horizontal scroll
+   on the main workspace shell. Applied only to content containers. */
+.mb-root .ws-page,
+.mb-root .ws-cols,
+.mb-root .tools-cols,
+.mb-root .ws-card,
+.mb-root .ws-shell {
+  overflow-x: clip;
+}
+
+@media (max-width: 860px) {
+  .mb-root { --ws-gutter: 16px; }
+  /* Stack all two-column workspace layouts. */
+  .ws-cols, .tools-cols { grid-template-columns: 1fr !important; }
+  .ws-page { padding-left: 16px; padding-right: 16px; }
+  /* Top bar: tighter, hide secondary labels, let the org select shrink. */
+  .ws-topbar { gap: 8px; padding: 0 14px; }
+  .ws-topbar .ws-brandtext, .ws-topbar .ws-applabel { display: none; }
+  .ws-topbar select { max-width: 120px; }
+}
+@media (max-width: 480px) {
+  .ws-topbar .ws-orgswitch { display: none; }
+}

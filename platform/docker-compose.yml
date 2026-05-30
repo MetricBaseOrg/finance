@@ -1,0 +1,66 @@
+# MetricBase Platform — single-VPS deployment.
+# Postgres is managed on Neon (DATABASE_URL/DIRECT_URL), so it is NOT a service
+# here. Two app containers (web + bot) sit behind Caddy for TLS + routing.
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+    expose:
+      - "3000"
+    restart: unless-stopped
+
+  bot:
+    build:
+      context: ./bot
+      dockerfile: Dockerfile
+    env_file: .env
+    environment:
+      # The bot is a thin client: it calls the web service's /api/bot/* with
+      # BOT_SERVICE_TOKEN rather than touching the database directly.
+      PLATFORM_API_BASE: "http://web:3000"
+    depends_on:
+      - web
+    restart: unless-stopped
+
+  # FieldFlow compute engine (Phase 3 hybrid): the proven Python analytics,
+  # metrics, and formula-DSL code runs here, READ-ONLY against the shared
+  # Postgres. Next.js owns the schema + all writes via Prisma; /api/field/*
+  # proxies analytics/dashboard/formula requests to this service. Wired up in
+  # Phase 3b — this is the service slot.
+  field-engine:
+    build:
+      context: ./field-engine
+      dockerfile: Dockerfile
+    env_file: .env
+    environment:
+      # Read-only connection to the same Neon Postgres the web app uses.
+      DATABASE_URL: "${DATABASE_URL}"
+      FIELD_ENGINE_TOKEN: "${FIELD_ENGINE_TOKEN}"
+    expose:
+      - "5001"
+    depends_on:
+      - web
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+    restart: unless-stopped
+
+volumes:
+  caddy_data:
+  caddy_config:

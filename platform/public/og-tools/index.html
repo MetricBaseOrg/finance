@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OG-tools — Free Oilfield Converter &amp; Calculator</title>
+  <meta name="description" content="Free oilfield unit converter and field calculator. Drilling, production, reservoir, and gas. Works offline. No signup." />
+  <meta name="google-adsense-account" content="ca-pub-6244083942838780" />
+  <meta name="robots" content="index, follow" />
+  <meta content='index, follow' name='robots'/>
+  <meta content='oilfield calculator, oilfield unit converter, drilling calculator, mud weight converter, hydrostatic pressure calculator, API gravity calculator, gas volume converter, petroleum engineering tools, Z-factor calculator, ECD calculator, pipe capacity calculator, annular volume calculator, oil and gas converter, production engineering calculator' name='keywords'/>
+
+  <!-- Google tag (gtag.js) -->
+
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6244083942838780"
+     crossorigin="anonymous"></script>
+
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-HQ2SCQZ3KT"></script>
+
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-HQ2SCQZ3KT');
+  </script>
+
+  <!-- Canonical -->
+  <link rel="canonical" href="https://og.metricbase.org/" />
+
+  <!-- Sitemap -->
+  <link rel="sitemap" type="application/xml" href="https://og.metricbase.org/sitemap.xml" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://og.metricbase.org/" />
+  <meta property="og:site_name" content="MetricBase" />
+  <meta property="og:title" content="OG-tools — Free Oilfield Converter &amp; Calculator" />
+  <meta property="og:description" content="Free oilfield unit converter and field calculator. Drilling, production, reservoir, and gas. Works offline. No signup." />
+  <meta property="og:image" content="https://metricbase.org/assets/og-tools.png" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:site" content="@MetricBase" />
+  <meta name="twitter:title" content="OG-tools — Free Oilfield Converter &amp; Calculator" />
+  <meta name="twitter:description" content="Free oilfield unit converter and field calculator. Drilling, production, reservoir, and gas. Works offline. No signup." />
+  <meta name="twitter:image" content="https://metricbase.org/assets/og-tools.png" />
+
+  <!-- Schema.org -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "OG-tools — Free Oilfield Converter & Calculator",
+    "url": "https://og.metricbase.org/",
+    "description": "Free oilfield unit converter and field calculator. Drilling, production, reservoir, and gas. Works offline. No signup.",
+    "applicationCategory": "UtilitiesApplication",
+    "applicationSubCategory": "Engineering",
+    "operatingSystem": "Web",
+    "browserRequirements": "Requires JavaScript",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "isAccessibleForFree": true,
+    "featureList": [
+      "Drilling calculator",
+      "Mud weight converter",
+      "Hydrostatic pressure calculator",
+      "API gravity calculator",
+      "Gas volume converter",
+      "Z-factor calculator",
+      "ECD calculator",
+      "Pipe capacity calculator",
+      "Annular volume calculator",
+      "Works offline"
+    ],
+    "publisher": {
+      "@type": "Organization",
+      "@id": "https://metricbase.org/#organization",
+      "name": "MetricBase",
+      "url": "https://metricbase.org/"
+    }
+  }
+  </script>
+
+  <!-- Favicon & Fonts -->
+  <link rel="icon" type="image/x-icon" href="assets/favicon.ico" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+  <!-- Google AdSense Auto Ads -->
+  <script async='async' src='https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6244083942838780' crossorigin='anonymous'></script>
+
+  <meta name="theme-color" content="#0a0a0a" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <!-- ─── NAV ────────────────────────────────────────── -->
+  <nav id="mb-nav">
+    <div class="mb-nav-left">
+      <a class="mb-logo" href="#top">Metric<span>Base</span></a>
+      <div class="mb-nav-divider"></div>
+      <span class="mb-nav-section">Field calculator</span>
+      <ul class="mb-nav-links">
+        <li><a href="https://energy.metricbase.org">Energy</a></li>
+        <li><a href="https://chain.metricbase.org">Crypto</a></li>
+        <li><a href="https://saham.metricbase.org">Stocks</a></li>
+        <li><a href="https://metricbase.org/journal">Journal</a></li>
+        <li><a href="https://metricbase.org/about">About</a></li>
+        <li><a href="https://metricbase.org">Portal</a></li>
+      </ul>
+    </div>
+    <div class="mb-nav-right">
+      <a class="mb-nav-cta" href="#units">Open</a>
+      <button id="mb-hamburger-btn" class="mb-hamburger" aria-label="Menu" aria-expanded="false" type="button">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ─── DRAWER ─────────────────────────────────────── -->
+  <div id="mb-drawer-overlay"></div>
+  <nav id="mb-drawer" aria-label="Mobile navigation">
+    <div class="mb-drawer-header">
+      <span class="mb-drawer-logo">OG<span>tools</span></span>
+      <button class="mb-drawer-close" aria-label="Close menu" type="button">&#215;</button>
+    </div>
+    <div class="mb-drawer-section">
+      <span class="mb-drawer-label">Calculators</span>
+      <a class="mb-drawer-link" href="#units">Unit converter</a>
+      <a class="mb-drawer-link" href="#drilling">Drilling</a>
+      <a class="mb-drawer-link" href="#production">Production / reservoir</a>
+      <a class="mb-drawer-link" href="#gas">Gas</a>
+    </div>
+    <div class="mb-drawer-section">
+      <span class="mb-drawer-label">MetricBase</span>
+      <a class="mb-drawer-link" href="https://energy.metricbase.org">Energy Markets</a>
+      <a class="mb-drawer-link" href="https://chain.metricbase.org">Crypto &amp; Tech</a>
+      <a class="mb-drawer-link" href="https://saham.metricbase.org">Stocks &amp; Macro</a>
+      <a class="mb-drawer-link" href="https://metricbase.org/journal">Journal</a>
+      <a class="mb-drawer-link" href="https://metricbase.org/about">About</a>
+      <a class="mb-drawer-link" href="https://metricbase.org">Main Portal</a>
+    </div>
+    <div class="mb-drawer-section">
+      <span class="mb-drawer-label">Project</span>
+      <a class="mb-drawer-link" href="https://github.com/MetricBaseOrg/OG-tools" target="_blank" rel="noopener">GitHub <span>&#8599;</span></a>
+      <a class="mb-drawer-link" href="tests/test.html">Test runner <span>&#8599;</span></a>
+    </div>
+    <a class="mb-drawer-cta" href="#units">Start converting</a>
+  </nav>
+
+  <!-- ─── PROGRESS BAR ───────────────────────────────── -->
+  <div id="mb-progress"></div>
+
+  <!-- ─── BACK TO TOP ────────────────────────────────── -->
+  <a id="mb-back-top" href="#top" aria-label="Back to top">&#8593;</a>
+
+  <!-- ─── SIDE RAIL LAYOUT ────────────────────────────── -->
+  <div id="mb-layout">
+
+  <div class="mb-rail mb-rail-left">
+    <ins class="adsbygoogle"
+         data-ad-client="ca-pub-6244083942838780"
+         data-ad-slot="1083218233"
+         data-ad-format="auto"
+         data-full-width-responsive="false"></ins>
+    <script>if (window.innerWidth >= 1280) { (adsbygoogle = window.adsbygoogle || []).push({}); }</script>
+  </div>
+
+  <!-- ─── BODY ───────────────────────────────────────── -->
+  <div id="mb-body">
+    <span id="top"></span>
+
+    <!-- HERO -->
+    <section id="portal-hero">
+      <div class="mb-container">
+        <span class="hero-tagline reveal">Precision growth. No wasted motion.</span>
+        <div class="hero-wordmark reveal reveal-delay-1">OG<span>tools</span></div>
+        <p class="hero-sub reveal reveal-delay-2">Free oilfield converter and field calculator. Drilling, production, reservoir, and gas — built for the rig floor and the office.</p>
+        <div class="hero-pills reveal reveal-delay-3">
+          <a class="hero-pill" href="#units">Units <span class="hero-pill-arrow">&rarr;</span></a>
+          <a class="hero-pill" href="#drilling">Drilling <span class="hero-pill-arrow">&rarr;</span></a>
+          <a class="hero-pill" href="#production">Production <span class="hero-pill-arrow">&rarr;</span></a>
+          <a class="hero-pill" href="#gas">Gas <span class="hero-pill-arrow">&rarr;</span></a>
+        </div>
+      </div>
+    </section>
+
+    <!-- CREDIBILITY STRIP -->
+    <div id="strip">
+      <div class="mb-container">
+        <div class="strip-inner">
+          <span class="strip-item"><span class="strip-dot"></span>Free forever</span>
+          <span class="strip-item"><span class="strip-dot"></span>Works offline</span>
+          <span class="strip-item"><span class="strip-dot"></span>No signup</span>
+          <span class="strip-item"><span class="strip-dot"></span>Open source</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── TAB BAR ─────────────────────────────────────── -->
+    <div id="mb-tabs" role="tablist" aria-label="Calculator categories">
+      <div class="mb-container">
+        <div class="mb-tabs-inner">
+          <button class="tab-btn is-active" data-tab="units"      role="tab" type="button"><span class="tab-num">01</span>Convert</button>
+          <button class="tab-btn"           data-tab="drilling"   role="tab" type="button"><span class="tab-num">02</span>Drilling</button>
+          <button class="tab-btn"           data-tab="production" role="tab" type="button"><span class="tab-num">03</span>Production</button>
+          <button class="tab-btn"           data-tab="gas"        role="tab" type="button"><span class="tab-num">04</span>Gas</button>
+          <button class="tab-btn"           data-tab="settings"   role="tab" type="button"><span class="tab-num">05</span>Preferences</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============== UNITS ============== -->
+    <section id="units" class="calc-section panel is-active">
+      <div class="mb-container">
+        <span class="section-label reveal">01 — Convert</span>
+        <h2 class="reveal reveal-delay-1">Oilfield unit converter.</h2>
+        <p class="section-sub reveal reveal-delay-2">Volume, pressure, temperature, length, mass, flow rate. Edit either side — the other recomputes instantly.</p>
+
+        <div class="calc-grid cols-1">
+          <div class="calc-card reveal">
+            <span class="calc-card-eyebrow">Convert</span>
+            <div class="calc-card-title">Pick a category, then a pair of units.</div>
+
+            <div class="field">
+              <label class="field-label" for="uc-category">Category</label>
+              <select class="select" id="uc-category"></select>
+            </div>
+
+            <div class="field-row cols-2">
+              <div class="field">
+                <label class="field-label" for="uc-from-value">From</label>
+                <div class="field-group">
+                  <input class="input" id="uc-from-value" type="text" step="any" inputmode="decimal" />
+                  <select class="select" id="uc-from-unit"></select>
+                </div>
+              </div>
+              <div class="field">
+                <label class="field-label" for="uc-to-value">To</label>
+                <div class="field-group">
+                  <input class="input" id="uc-to-value" type="text" step="any" inputmode="decimal" />
+                  <select class="select" id="uc-to-unit"></select>
+                </div>
+              </div>
+            </div>
+
+            <p class="hint">Categories: volume (bbl, gal, m³), pressure (psi, kPa, bar, atm), temperature (°F, °C, K, °R), length, mass, flow rate.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============== DRILLING ============== -->
+    <section id="drilling" class="calc-section panel">
+      <div class="mb-container">
+        <span class="section-label reveal">02 — Drilling</span>
+        <h2 class="reveal reveal-delay-1">Mud, hydrostatics, capacity.</h2>
+        <p class="section-sub reveal reveal-delay-2">Mud-weight conversions, hydrostatic pressure, pipe and annular volume, equivalent circulating density.</p>
+
+        <div class="calc-grid">
+
+          <div class="calc-card reveal">
+            <span class="calc-card-eyebrow">Mud weight</span>
+            <div class="calc-card-title">Convert ppg ↔ SG ↔ lb/ft³ ↔ kg/m³ ↔ psi/ft.</div>
+            <div class="field-row cols-2">
+              <div class="field">
+                <label class="field-label" for="mw-from-value">From</label>
+                <div class="field-group">
+                  <input class="input" id="mw-from-value" type="text" step="any" inputmode="decimal" />
+                  <select class="select" id="mw-from-unit"></select>
+                </div>
+              </div>
+              <div class="field">
+                <label class="field-label" for="mw-to-value">To</label>
+                <div class="field-group">
+                  <input class="input" id="mw-to-value" type="text" step="any" inputmode="decimal" readonly />
+                  <select class="select" id="mw-to-unit"></select>
+                </div>
+              </div>
+            </div>
+            <p class="hint">Fresh water = 8.3454 ppg = 1.000 SG = 0.4335 psi/ft.</p>
+          </div>
+
+          <div class="calc-card reveal reveal-delay-1">
+            <span class="calc-card-eyebrow">Hydrostatic pressure</span>
+            <div class="calc-card-title">Static column pressure at TVD.</div>
+            <div class="field">
+              <label class="field-label" for="hp-system">System</label>
+              <select class="select" id="hp-system">
+                <option value="field">Field — ppg, ft &rarr; psi</option>
+                <option value="si">SI — kg/m³, m &rarr; kPa</option>
+              </select>
+            </div>
+            <div class="field-row cols-2">
+              <div class="field">
+                <label class="field-label" for="hp-mw">Mud weight</label>
+                <input class="input" id="hp-mw" type="text" step="any" inputmode="decimal" placeholder="12" />
+              </div>
+              <div class="field">
+                <label class="field-label" for="hp-tvd">TVD</label>
+                <input class="input" id="hp-tvd" type="text" step="any" inputmode="decimal" placeholder="10000" />
+              </div>
+            </div>
+            <p class="result"><span class="result-label">P =</span><span class="result-value" id="hp-result"></span></p>
+            <p class="hint">P(psi) = MW(ppg) × TVD(ft) × 0.052</p>
+          </div>
+
+          <div class="calc-card reveal reveal-delay-2">
+            <span class="calc-card-eyebrow">Pipe capacity</span>
+            <div class="calc-card-title">Capacity per foot and total volume.</div>
+            <div class="field-row cols-2">
+              <div class="field">
+                <label class="field-label" for="pv-id">Pipe ID (in)</label>
+                <input class="input" id="pv-id" type="text" step="any" inputmode="decimal" />
+              </div>
+              <div class="field">
+                <label class="field-label" for="pv-len">Length (ft)</label>
+                <input class="input" id="pv-len" type="text" step="any" inputmode="decimal" />
+              </div>
+            </div>
+            <p class="result"><span class="result-label">Capacity</span><span class="result-value" id="pv-cap"></span></p>
+            <p class="result"><span class="result-label">Volume</span><span class="result-value" id="pv-vol"></span></p>
+            <p class="hint">bbl/ft = ID² / 1029.4</p>
+          </div>
+
+          <div class="calc-card reveal reveal-delay-3">
+            <span class="calc-card-eyebrow">Annular capacity</span>
+            <div class="calc-card-title">Hole vs pipe OD annulus.</div>
+            <div class="field-row cols-3">
+              <div class="field">
+                <label class="field-label" for="av-dh">Hole (in)</label>
+                <input class="input" id="av-dh" type="text" step="any" inputmode="decimal" />
+              </div>
+              <div class="field">
+                <label class="field-label" for="av-dp">Pipe OD (in)</label>
+                <input class="input" id="av-dp" type="text" step="any" inputmode="decimal" />
+              </div>
+              <div class="field">
+                <label class="field-label" for="av-len">Length (ft)</label>
+                <input class="input" id="av-len" type="text" step="any" inputmode="decimal" />
+              </div>
+            </div>
+            <p class="result"><span class="result-label">Capacity</span><span class="result-value" id="av-cap"></span></p>
+            <p class="result"><span class="result-label">Volume</span><span class="result-value" id="av-vol"></span></p>
+            <p class="hint">bbl/ft = (Dh² − Dp²) / 1029.4</p>
+          </div>
+
+          <div class="calc-card reveal">
+            <span class="calc-card-eyebrow">Equivalent circulating density</span>
+            <div class="calc-card-title">ECD from MW, APL, and TVD.</div>
+            <div class="field-row cols-3">
+              <div class="field">
+                <label class="field-label" for="ecd-mw">MW (ppg)</label>
+                <input class="input" id="ecd-mw" type="text" step="any" inputmode="decimal" />
+              </div>
+              <div class="field">
+                <label class="field-label" for="ecd-apl">APL (psi)</label>
+                <input class="input" id="ecd-apl" type="text" step="any" inputmode="decimal" />
+              </div>
+              <div class="field">
+                <label class="field-label" for="ecd-tvd">TVD (ft)</label>
+                <input class="input" id="ecd-tvd" type="text" step="any" inputmode="decimal" />
+              </div>
+            </div>
+            <p class="result"><span class="result-label">ECD</span><span class="result-value" id="ecd-result"></span></p>
+            <p class="hint">ECD = MW + APL / (0.052 × TVD)</p>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ============== PRODUCTION ============== -->
+    <section id="production" class="calc-section panel">
+      <div class="mb-container">
+        <span class="section-label reveal">03 — Production</span>
+        <h2 class="reveal reveal-delay-1">Reservoir &amp; production fluids.</h2>
+        <p class="section-sub reveal reveal-delay-2">API gravity, gas-oil ratio, and the field correlations engineers reach for first: Standing Bo and gas Bg.</p>
+
+        <div class="calc-grid">
+
+          <div class="calc-card reveal">
+            <span class="calc-card-eyebrow">API ↔ specific gravity</span>
+            <div class="calc-card-title">Crude oil density on the API scale.</div>
+            <div class="field-row cols-2">
+              <div class="field">
+                <label class="field-label" for="api-value">°API</label>
+                <input class="input" id="api-value" type="text" step="any" inputmode="decimal" />
+              </div>
+              <div class="field">
+                <label class="field-label" for="api-sg">SG (water = 1)</label>
+                <input class="input" id="api-sg" type="text" step="any" inputmode="decimal" />
+              </div>
+            </div>
+            <p class="hint">SG = 141.5 / (131.5 + °API)</p>
+          </div>
+
+          <div class="calc-card reveal reveal-delay-1">
+            <span class="calc-card-eyebrow">Gas-oil ratio</span>
+            <div class="calc-card-title">Convert between field and metric.</div>
+            <div class="field-row cols-2">
+              <div class="field">
+                <label class="field-label" for="gor-scfstb">scf / STB</label>
+                <input class="input" id="gor-scfstb" type="text" step="any" inputmode="decimal" />
+              </div>
+              <div class="field">
+                <label class="field-label" for="gor-sm3">Sm³ / Sm³</label>
+                <input class="input" id="gor-sm3" type="text" step="any" inputmode="decimal" />
+              </div>
+            </div>
+            <p class="hint">1 scf/STB ≈ 0.1781 Sm³/Sm³</p>
+          </div>
+
+          <div class="calc-card reveal reveal-delay-2">
+            <span class="calc-card-eyebrow">Oil FVF — Standing</span>
+            <div class="calc-card-title">Bo at saturation from Rs, gravities, T.</div>
+            <div class="field-row cols-2">
+              <div class="field">
+                <label class="field-label" for="bo-rs">Rs (scf/STB)</label>
+                <input class="input" id="bo-rs" type="text" step="any" inputmode="decimal" placeholder="500" />
+              </div>
+              <div class="field">
+                <label class="field-label" for="bo-gasSg">Gas SG (air=1)</label>
+                <input class="input" id="bo-gasSg" type="text" step="any" inputmode="decimal" placeholder="0.65" />
+              </div>
+              <div class="field">
+                <label class="field-label" for="bo-oilSg">Oil SG</label>
+                <input class="input" id="bo-oilSg" type="text" step="any" inputmode="decimal" placeholder="0.85" />
+              </div>
+              <div class="field">
+                <label class="field-label" for="bo-temp">T (°F)</label>
+                <input class="input" id="bo-temp" type="text" step="any" inputmode="decimal" placeholder="180" />
+              </div>
+            </div>
+            <p class="result"><span class="result-label">Bo</span><span class="result-value" id="bo-result"></span></p>
+            <p class="hint">Bo = 0.972 + 1.47e-4 × F^1.175 ; F = Rs(γg/γo)^0.5 + 1.25 T</p>
+          </div>
+
+          <div class="calc-card reveal reveal-delay-3">
+            <span class="calc-card-eyebrow">Gas FVF</span>
+            <div class="calc-card-title">Bg at reservoir T, P.</div>
+            <div class="field-row cols-3">
+              <div class="field">
+                <label class="field-label" for="bg-z">Z</label>
+                <input class="input" id="bg-z" type="text" step="any" inputmode="decimal" placeholder="0.9" />
+              </div>
+              <div class="field">
+                <label class="field-label" for="bg-temp">T (°F)</label>
+                <input class="input" id="bg-temp" type="text" step="any" inputmode="decimal" />
+              </div>
+              <div class="field">
+                <label class="field-label" for="bg-press">P (psia)</label>
+                <input class="input" id="bg-press" type="text" step="any" inputmode="decimal" />
+              </div>
+            </div>
+            <p class="result"><span class="result-label">Bg</span><span class="result-value" id="bg-result"></span></p>
+            <p class="hint">Bg = 0.0283 × Z × T(°R) / P(psia)</p>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ============== GAS ============== -->
+    <section id="gas" class="calc-section panel">
+      <div class="mb-container">
+        <span class="section-label reveal">04 — Gas</span>
+        <h2 class="reveal reveal-delay-1">Standard gas math.</h2>
+        <p class="section-sub reveal reveal-delay-2">Volume conversions at standard conditions, Z-factor via Sutton + Brill–Beggs, real-gas density.</p>
+
+        <div class="calc-grid">
+
+          <div class="calc-card reveal">
+            <span class="calc-card-eyebrow">Standard volume</span>
+            <div class="calc-card-title">scf · Mscf · MMscf · Bcf · Sm³.</div>
+            <div class="field-row cols-2">
+              <div class="field">
+                <label class="field-label" for="gv-from-value">From</label>
+                <div class="field-group">
+                  <input class="input" id="gv-from-value" type="text" step="any" inputmode="decimal" />
+                  <select class="select" id="gv-from-unit"></select>
+                </div>
+              </div>
+              <div class="field">
+                <label class="field-label" for="gv-to-value">To</label>
+                <div class="field-group">
+                  <input class="input" id="gv-to-value" type="text" step="any" inputmode="decimal" readonly />
+                  <select class="select" id="gv-to-unit"></select>
+                </div>
+              </div>
+            </div>
+            <p class="hint">Standard conditions: 60 °F, 14.696 psia.</p>
+          </div>
+
+          <div class="calc-card reveal reveal-delay-1">
+            <span class="calc-card-eyebrow">Gas SG ↔ molecular weight</span>
+            <div class="calc-card-title">Air = 1.000 reference.</div>
+            <div class="field-row cols-2">
+              <div class="field">
+                <label class="field-label" for="gsg-sg">Gas SG</label>
+                <input class="input" id="gsg-sg" type="text" step="any" inputmode="decimal" />
+              </div>
+              <div class="field">
+                <label class="field-label" for="gsg-mw">MW (lb/lbmol)</label>
+                <input class="input" id="gsg-mw" type="text" step="any" inputmode="decimal" />
+              </div>
+            </div>
+            <p class="hint">MW = 28.9647 × γg</p>
+          </div>
+
+          <div class="calc-card reveal reveal-delay-2">
+            <span class="calc-card-eyebrow">Z-factor</span>
+            <div class="calc-card-title">Brill &amp; Beggs from Sutton pseudo-criticals.</div>
+            <div class="field-row cols-3">
+              <div class="field">
+                <label class="field-label" for="zf-sg">Gas SG</label>
+                <input class="input" id="zf-sg" type="text" step="any" inputmode="decimal" placeholder="0.65" />
+              </div>
+              <div class="field">
+                <label class="field-label" for="zf-temp">T (°F)</label>
+                <input class="input" id="zf-temp" type="text" step="any" inputmode="decimal" placeholder="150" />
+              </div>
+              <div class="field">
+                <label class="field-label" for="zf-press">P (psia)</label>
+                <input class="input" id="zf-press" type="text" step="any" inputmode="decimal" placeholder="2000" />
+              </div>
+            </div>
+            <p class="result"><span class="result-label">Z</span><span class="result-value" id="zf-result"></span></p>
+            <p class="hint">Best for 1.2 ≤ Tpr ≤ 2.4, Ppr ≤ 13.</p>
+          </div>
+
+          <div class="calc-card reveal reveal-delay-3">
+            <span class="calc-card-eyebrow">Real-gas density</span>
+            <div class="calc-card-title">ρ at reservoir T, P (Z auto-computed).</div>
+            <div class="field-row cols-3">
+              <div class="field">
+                <label class="field-label" for="gd-sg">Gas SG</label>
+                <input class="input" id="gd-sg" type="text" step="any" inputmode="decimal" placeholder="0.65" />
+              </div>
+              <div class="field">
+                <label class="field-label" for="gd-temp">T (°F)</label>
+                <input class="input" id="gd-temp" type="text" step="any" inputmode="decimal" />
+              </div>
+              <div class="field">
+                <label class="field-label" for="gd-press">P (psia)</label>
+                <input class="input" id="gd-press" type="text" step="any" inputmode="decimal" />
+              </div>
+            </div>
+            <p class="result"><span class="result-label">ρ</span><span class="result-value" id="gd-result"></span></p>
+            <p class="hint">ρ = P · MW / (Z · 10.732 · T(°R))</p>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ============== SETTINGS ============== -->
+    <section id="settings" class="calc-section panel">
+      <div class="mb-container">
+        <span class="section-label reveal">05 — Preferences</span>
+        <h2 class="reveal reveal-delay-1">Tune the defaults.</h2>
+        <p class="section-sub reveal reveal-delay-2">Saved locally in your browser only. Never sent anywhere.</p>
+
+        <div class="calc-grid cols-1">
+          <div class="calc-card reveal">
+            <div class="field-row cols-2">
+              <div class="field">
+                <label class="field-label" for="pref-system">Default unit system</label>
+                <select class="select" id="pref-system">
+                  <option value="field">Field — psi, bbl, °F, ft</option>
+                  <option value="si">SI — kPa, m³, °C, m</option>
+                </select>
+              </div>
+              <div class="field">
+                <label class="field-label" for="pref-sigfigs">Significant figures</label>
+                <select class="select" id="pref-sigfigs">
+                  <option>2</option><option>3</option><option>4</option><option>5</option><option>6</option>
+                </select>
+              </div>
+            </div>
+            <div class="field" style="margin-top: 8px;">
+              <button class="btn-ghost btn" id="pref-reset" type="button">Reset to defaults</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </div><!-- /#mb-body -->
+
+  <div class="mb-rail mb-rail-right">
+    <ins class="adsbygoogle"
+         data-ad-client="ca-pub-6244083942838780"
+         data-ad-slot="1083218233"
+         data-ad-format="auto"
+         data-full-width-responsive="false"></ins>
+    <script>if (window.innerWidth >= 1280) { (adsbygoogle = window.adsbygoogle || []).push({}); }</script>
+  </div>
+
+  </div><!-- /#mb-layout -->
+
+  <!-- ─── FOOTER ─────────────────────────────────────── -->
+  <footer id="mb-footer">
+    <div class="mb-container">
+
+      <div class="mb-footer-nl">
+        <div class="mb-footer-nl-text">
+          <h3>Precision growth. No wasted motion.</h3>
+          <p>Free oilfield tools, open source under MIT.</p>
+        </div>
+        <div class="mb-footer-nl-actions">
+          <a class="btn" href="#units">Open calculator</a>
+          <a class="btn btn-ghost" href="https://github.com/MetricBaseOrg/OG-tools" target="_blank" rel="noopener">GitHub</a>
+        </div>
+      </div>
+
+      <div class="mb-footer-main">
+        <div class="mb-footer-grid">
+          <div class="mb-footer-brand">
+            <div class="brand-name">OG<span>tools</span></div>
+            <p>Free oilfield converter and field calculator. Drilling, production, reservoir, and gas. Works offline.</p>
+            <span class="mb-footer-tagline">Bridging field math and the rig floor</span>
+          </div>
+          <div class="mb-footer-col">
+            <div class="mb-footer-col-head" data-toggle>Calculators <span class="toggle-icon">+</span></div>
+            <ul>
+              <li><a href="#units">Unit converter</a></li>
+              <li><a href="#drilling">Drilling</a></li>
+              <li><a href="#production">Production</a></li>
+              <li><a href="#gas">Gas</a></li>
+            </ul>
+          </div>
+          <div class="mb-footer-col">
+            <div class="mb-footer-col-head" data-toggle>Resources <span class="toggle-icon">+</span></div>
+            <ul>
+              <li><a href="tests/test.html">Test runner</a></li>
+              <li><a href="https://github.com/MetricBaseOrg/OG-tools" target="_blank" rel="noopener">Source code</a></li>
+              <li><a href="https://github.com/MetricBaseOrg/OG-tools/issues" target="_blank" rel="noopener">Report an issue</a></li>
+            </ul>
+          </div>
+          <div class="mb-footer-col">
+            <div class="mb-footer-col-head" data-toggle>MetricBase <span class="toggle-icon">+</span></div>
+            <ul>
+              <li><a href="https://metricbase.org">Main Portal</a></li>
+              <li><a href="https://metricbase.org/about">About</a></li>
+              <li><a href="https://metricbase.org/journal">Journal</a></li>
+              <li><a href="https://metricbase.org/contact">Contact</a></li>
+            </ul>
+          </div>
+          <div class="mb-footer-col">
+            <div class="mb-footer-col-head" data-toggle>Legal <span class="toggle-icon">+</span></div>
+            <ul>
+              <li><a href="https://metricbase.org/privacy">Privacy</a></li>
+              <li><a href="https://metricbase.org/terms">Terms</a></li>
+              <li><a href="https://metricbase.org/disclaimer">Disclaimer</a></li>
+              <li><a href="https://metricbase.org/cookie-policy">Cookies</a></li>
+              <li><a href="https://metricbase.org/editorial-standards">Editorial</a></li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="mb-footer-bottom">
+          <span class="mb-footer-copy">&#169; 2026 MetricBase &middot; OG-tools &middot; MIT licensed</span>
+          <div class="mb-footer-legal">
+            <a href="https://github.com/MetricBaseOrg/OG-tools/blob/main/LICENSE" target="_blank" rel="noopener">MIT License</a>
+            <a href="https://metricbase.org/privacy">Privacy</a>
+            <a href="https://metricbase.org/terms">Terms</a>
+            <a href="https://metricbase.org/disclaimer">Disclaimer</a>
+            <a href="https://metricbase.org/cookie-policy">Cookies</a>
+            <a href="https://metricbase.org/editorial-standards">Editorial</a>
+            <a href="https://metricbase.org/contact">Contact</a>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </footer>
+
+  <!-- ─── DISCLAIMER STRIP ────────────────────────────── -->
+  <div id="mb-disclaimer">
+    <div class="mb-container">
+      <p>
+        OG-tools is provided for informational and educational purposes only. Field correlations (Standing Bo, Brill–Beggs Z, etc.) are approximations.
+        Verify against authoritative sources and measured data before any safety-critical use. The authors accept no liability.
+      </p>
+    </div>
+  </div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
