@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getFieldContext, FIELD_ENUMS } from '@/server/field'
+import { getFieldContext, FIELD_ENUMS, logFieldAudit } from '@/server/field'
 
 export const dynamic = 'force-dynamic'
 
@@ -49,6 +49,10 @@ export async function POST(req: NextRequest) {
       status,
       notes: str(body.notes),
     },
+  })
+  await logFieldAudit({
+    organizationId: ctx.organizationId, userId: ctx.userId,
+    action: 'CREATE', entityType: 'LIFTING', entityId: lifting.id, summary: `Scheduled lifting ${lifting.tankerName}`,
   })
   return NextResponse.json(lifting, { status: 201 })
 }

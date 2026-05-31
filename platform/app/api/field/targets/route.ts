@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getFieldContext, FIELD_ENUMS } from '@/server/field'
+import { getFieldContext, FIELD_ENUMS, logFieldAudit } from '@/server/field'
 
 export const dynamic = 'force-dynamic'
 
@@ -50,6 +50,10 @@ export async function POST(req: NextRequest) {
     },
     create: { organizationId: ctx.organizationId, nodeId, year, month, category, targetVol },
     update: { targetVol },
+  })
+  await logFieldAudit({
+    organizationId: ctx.organizationId, userId: ctx.userId,
+    action: 'UPSERT', entityType: 'TARGET', entityId: target.id, summary: `Set ${target.category} target for ${target.year}-${String(target.month).padStart(2, '0')}`,
   })
   return NextResponse.json(target, { status: 201 })
 }

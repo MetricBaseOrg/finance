@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getFieldContext, FIELD_ENUMS } from '@/server/field'
+import { getFieldContext, FIELD_ENUMS, logFieldAudit } from '@/server/field'
 
 export const dynamic = 'force-dynamic'
 
@@ -62,6 +62,10 @@ export async function POST(req: NextRequest) {
       memo: body.memo ? String(body.memo) : null,
       reportedBy: body.reportedBy ? String(body.reportedBy) : null,
     },
+  })
+  await logFieldAudit({
+    organizationId: ctx.organizationId, userId: ctx.userId,
+    action: 'CREATE', entityType: 'FLOW', entityId: flow.id, summary: `Logged ${flow.flowType} ${flow.volume} on ${flow.date}`,
   })
   return NextResponse.json(flow, { status: 201 })
 }

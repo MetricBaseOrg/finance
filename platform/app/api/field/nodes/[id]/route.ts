@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getFieldContext } from '@/server/field'
+import { getFieldContext, logFieldAudit } from '@/server/field'
 
 export const dynamic = 'force-dynamic'
 
@@ -33,5 +33,9 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
 
   const res = await prisma.node.deleteMany({ where: { id, organizationId: ctx.organizationId } })
   if (res.count === 0) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  await logFieldAudit({
+    organizationId: ctx.organizationId, userId: ctx.userId,
+    action: 'DELETE', entityType: 'NODE', entityId: id, summary: 'Deleted a node',
+  })
   return NextResponse.json({ ok: true })
 }

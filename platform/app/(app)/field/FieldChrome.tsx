@@ -9,8 +9,12 @@ const TABS = [
   { id: 'nodes', label: 'Nodes', href: '/field/nodes' },
   { id: 'flow-log', label: 'Flow Log', href: '/field/flow-log' },
   { id: 'liftings', label: 'Liftings', href: '/field/liftings' },
+  { id: 'transfers', label: 'Transfers', href: '/field/transfers' },
   { id: 'targets', label: 'Targets', href: '/field/targets' },
   { id: 'formulas', label: 'Formulas', href: '/field/formulas' },
+  { id: 'reports', label: 'Reports', href: '/field/reports' },
+  { id: 'data', label: 'Data', href: '/field/data' },
+  { id: 'audit', label: 'Audit', href: '/field/audit' },
 ]
 
 export function FieldChrome() {
