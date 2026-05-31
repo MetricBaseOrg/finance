@@ -7,7 +7,7 @@ import { db } from "@/server/db";
 import { requireMembership } from "@/server/workspace";
 import { logAudit } from "@/server/audit";
 import { getFxRate } from "@/server/fx/provider";
-import { notifyApprovers } from "@/lib/finance/notify-approvers";
+import { notifyApprovers, notifyTransactionDecision } from "@/lib/finance/notify-approvers";
 
 const baseSchema = z.object({
   date: z.coerce.date(),
@@ -472,14 +472,24 @@ export async function approveTransaction(slug: string, id: string) {
     where: { id },
     data: { status: "POSTED", approvedById: user.id, approvedAt: new Date() },
   });
+  const detail = txn.type + " " + txn.amount.toString() + " " + txn.currency;
   await logAudit({
     organizationId: workspace.id,
     userId: user.id,
     action: "APPROVE",
     entityType: "TRANSACTION",
     entityId: id,
-    summary: "Approved " + txn.type + " " + txn.amount.toString() + " " + txn.currency,
+    summary: "Approved " + detail,
   });
+  notifyTransactionDecision({
+    organizationId: workspace.id,
+    slug: workspace.slug,
+    recipientUserId: txn.createdById,
+    approverId: user.id,
+    approverName: user.name || user.email || "An approver",
+    approved: true,
+    detail,
+  }).catch(console.error);
   revalidatePath("/finance/transactions");
   revalidatePath("/finance/dashboard");
   return {};
@@ -500,14 +510,24 @@ export async function rejectTransaction(slug: string, id: string) {
     where: { id },
     data: { status: "REJECTED", approvedById: user.id, approvedAt: new Date() },
   });
+  const detail = txn.type + " " + txn.amount.toString() + " " + txn.currency;
   await logAudit({
     organizationId: workspace.id,
     userId: user.id,
     action: "REJECT",
     entityType: "TRANSACTION",
     entityId: id,
-    summary: "Rejected " + txn.type + " " + txn.amount.toString() + " " + txn.currency,
+    summary: "Rejected " + detail,
   });
+  notifyTransactionDecision({
+    organizationId: workspace.id,
+    slug: workspace.slug,
+    recipientUserId: txn.createdById,
+    approverId: user.id,
+    approverName: user.name || user.email || "An approver",
+    approved: false,
+    detail,
+  }).catch(console.error);
   revalidatePath("/finance/transactions");
   revalidatePath("/finance/dashboard");
   return {};
