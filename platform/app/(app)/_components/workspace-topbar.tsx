@@ -3,19 +3,20 @@
 import { useState, useRef, useEffect, useTransition } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { ChevronDown, LogOut, Grip, Search } from 'lucide-react'
+import { ChevronDown, LogOut, Grip, Search, MessageSquare } from 'lucide-react'
 import { AppMark, AppTile, type AppId } from '@/app/home/ui'
 import { NotificationBell } from '@/components/notifications/notification-bell'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { setActiveOrg, signOutAction } from '../actions'
 import type { OrgSummary, SessionUser } from '@/lib/org'
 
-const APPS: { id: AppId | 'workspace'; name: string; sub: string; href: string }[] = [
+const APPS: { id: AppId | 'workspace' | 'chat'; name: string; sub: string; href: string }[] = [
   { id: 'workspace', name: 'Workspace', sub: 'Home', href: '/home' },
   { id: 'probase', name: 'ProBase', sub: 'Projects', href: '/projects' },
   { id: 'metricbase', name: 'Finance', sub: 'Tracker', href: '/finance' },
   { id: 'fieldflow', name: 'FieldFlow', sub: 'Field ops', href: '/field' },
   { id: 'ogtools', name: 'OGtools', sub: 'Calculators', href: '/tools' },
+  { id: 'chat', name: 'Chat', sub: 'Team', href: '/chat' },
 ]
 
 function currentApp(pathname: string): typeof APPS[number] {
@@ -23,8 +24,12 @@ function currentApp(pathname: string): typeof APPS[number] {
   if (pathname.startsWith('/finance')) return APPS[2]
   if (pathname.startsWith('/field')) return APPS[3]
   if (pathname.startsWith('/tools')) return APPS[4]
+  if (pathname.startsWith('/chat')) return APPS[5]
   return APPS[0]
 }
+
+// Apps without a dedicated AppMark glyph render a lucide icon instead.
+const GENERIC_APP_ICON: Record<string, typeof Grip> = { workspace: Grip, chat: MessageSquare }
 
 export function WorkspaceTopBar({ user, orgs, activeOrgId }: {
   user: SessionUser; orgs: OrgSummary[]; activeOrgId: string
@@ -35,7 +40,8 @@ export function WorkspaceTopBar({ user, orgs, activeOrgId }: {
   const menuRef = useRef<HTMLDivElement>(null)
   const cur = currentApp(pathname)
   const initials = (user.name ?? user.email).slice(0, 2).toUpperCase()
-  const logoColor = cur.id === 'workspace' ? 'var(--mb-brand)' : `var(--c-${cur.id})`
+  const isGenericApp = cur.id in GENERIC_APP_ICON
+  const logoColor = isGenericApp ? 'var(--mb-brand)' : `var(--c-${cur.id})`
 
   useEffect(() => {
     const onDoc = (e: MouseEvent) => { if (menuRef.current && !menuRef.current.contains(e.target as any)) setOpen(false) }
@@ -62,7 +68,7 @@ export function WorkspaceTopBar({ user, orgs, activeOrgId }: {
         <button className="ws-btn" onClick={() => setOpen((o) => !o)} title="Switch app"
           style={{ display: 'inline-flex', alignItems: 'center', gap: 8, border: '1px solid var(--mb-border)', background: 'var(--mb-surface)', borderRadius: 8, padding: '6px 9px', color: 'var(--mb-ink)' }}>
           <Grip className="h-4 w-4" style={{ color: 'var(--mb-ink-muted)' }} />
-          {cur.id !== 'workspace' && <AppMark app={cur.id as AppId} size={15} />}
+          {!isGenericApp && <AppMark app={cur.id as AppId} size={15} />}
           <span className="ws-applabel" style={{ fontSize: 12.5, fontWeight: 700 }}>{cur.id === 'workspace' ? 'Workspace' : cur.name}</span>
           <ChevronDown className="h-3.5 w-3.5" style={{ color: 'var(--mb-ink-soft)' }} />
         </button>
@@ -73,8 +79,8 @@ export function WorkspaceTopBar({ user, orgs, activeOrgId }: {
               return (
                 <Link key={a.id} href={a.href}
                   style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '9px 10px', borderRadius: 8, textDecoration: 'none', background: active ? 'var(--mb-surface-2)' : 'transparent' }}>
-                  {a.id === 'workspace'
-                    ? <span style={{ width: 28, height: 28, borderRadius: 8, display: 'grid', placeItems: 'center', border: '1px solid var(--mb-border)' }}><Grip className="h-4 w-4" style={{ color: 'var(--mb-ink-muted)' }} /></span>
+                  {a.id in GENERIC_APP_ICON
+                    ? <span style={{ width: 28, height: 28, borderRadius: 8, display: 'grid', placeItems: 'center', border: '1px solid var(--mb-border)' }}>{(() => { const I = GENERIC_APP_ICON[a.id]; return <I className="h-4 w-4" style={{ color: 'var(--mb-ink-muted)' }} /> })()}</span>
                     : <AppTile app={a.id as AppId} size={28} radius={8} />}
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--mb-ink)' }}>{a.name}</div>
@@ -136,6 +142,10 @@ export function WorkspaceTopBar({ user, orgs, activeOrgId }: {
         <ChevronDown className="h-3.5 w-3.5" style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', color: 'var(--mb-ink-soft)', pointerEvents: 'none' }} />
       </div>
 
+      <Link href="/chat" className="ws-iconbtn" title="Team chat" aria-label="Team chat"
+        style={{ display: 'grid', placeItems: 'center', color: cur.id === 'chat' ? 'var(--mb-brand)' : 'var(--mb-ink-2)' }}>
+        <MessageSquare className="h-4 w-4" />
+      </Link>
       <NotificationBell className="ws-iconbtn" />
       <ThemeToggle className="ws-iconbtn" />
       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
