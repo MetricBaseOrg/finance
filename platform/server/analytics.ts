@@ -255,7 +255,9 @@ export async function buildDashboard(
     sources.push({
       name: isCompany ? "Net loss" : "Net savings",
       value: totalSnkVal - totalSrcVal,
-      color: "#ef4444", // Red
+      // Amber — distinct from the expense reds so the deficit/drawdown doesn't
+      // read as just another expense category.
+      color: "#f59e0b",
     });
   }
 
