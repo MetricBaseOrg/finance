@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeRaw from 'rehype-raw'
@@ -784,15 +785,17 @@ export function TaskDetail({ taskId, initialTask, userRole, currentUserId, onClo
                 <div className="space-y-4">
                   {task.comments?.map(c => (
                     <div key={c.id} className="flex gap-3">
-                      <Avatar className="h-7 w-7 flex-shrink-0">
-                        <AvatarImage src={c.user.image ?? undefined} />
-                        <AvatarFallback className="text-[10px]">
-                          {getInitials(c.user.name || c.user.email || 'U')}
-                        </AvatarFallback>
-                      </Avatar>
+                      <Link href={`/u/${c.user.id}`} className="flex-shrink-0">
+                        <Avatar className="h-7 w-7">
+                          <AvatarImage src={c.user.image ?? undefined} />
+                          <AvatarFallback className="text-[10px]">
+                            {getInitials(c.user.name || c.user.email || 'U')}
+                          </AvatarFallback>
+                        </Avatar>
+                      </Link>
                       <div className="flex-1">
                         <div className="flex items-baseline gap-2">
-                          <span className="text-xs font-semibold text-gray-1">{c.user.name || c.user.email}</span>
+                          <Link href={`/u/${c.user.id}`} className="text-xs font-semibold text-gray-1 hover:text-indigo-600 hover:underline">{c.user.name || c.user.email}</Link>
                           <span className="text-xs text-gray-4">{format(new Date(c.createdAt), 'MMM d, h:mm a')}</span>
                         </div>
                         <CommentBody text={c.content} />

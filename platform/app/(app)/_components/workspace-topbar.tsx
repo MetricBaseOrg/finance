@@ -139,7 +139,12 @@ export function WorkspaceTopBar({ user, orgs, activeOrgId }: {
       <NotificationBell className="ws-iconbtn" />
       <ThemeToggle className="ws-iconbtn" />
       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        <Link href="/settings" title="Account & settings" style={{ width: 30, height: 30, borderRadius: '50%', background: 'var(--mb-brand)', color: '#fff', display: 'grid', placeItems: 'center', fontSize: 11, fontWeight: 700, textDecoration: 'none' }}>{initials}</Link>
+        <Link href="/settings" title="Account & settings" style={{ width: 30, height: 30, borderRadius: '50%', overflow: 'hidden', background: 'var(--mb-brand)', color: '#fff', display: 'grid', placeItems: 'center', fontSize: 11, fontWeight: 700, textDecoration: 'none' }}>
+          {user.image
+            // eslint-disable-next-line @next/next/no-img-element
+            ? <img src={user.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            : initials}
+        </Link>
         <button className="ws-iconbtn" title="Sign out" onClick={() => startTransition(() => signOutAction())}>
           <LogOut className="h-4 w-4" />
         </button>

@@ -130,7 +130,14 @@ export default async function MembersSettingsPage({
                     </div>
                   )}
                   <span className="font-sans text-sm text-white truncate">
-                    {m.user.name ?? "—"}
+                    <Link href={`/u/${m.userId}`} className="hover:text-gold transition-colors">
+                      {m.user.name ?? "—"}
+                    </Link>
+                    {m.user.kind === "AGENT" && (
+                      <span className="ml-2 font-mono text-[9px] uppercase tracking-[0.2em] text-black bg-gold px-1.5 py-0.5">
+                        Agent
+                      </span>
+                    )}
                     {m.userId === user.id && (
                       <span className="ml-2 font-mono text-[10px] uppercase tracking-[0.2em] text-gray-3 shrink-0">
                         you

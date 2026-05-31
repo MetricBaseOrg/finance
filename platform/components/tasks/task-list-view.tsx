@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { format } from 'date-fns'
 import { AlertCircle, ArrowUp, ArrowDown, Minus, Flag, Calendar, ChevronDown, ChevronRight, Check, GripVertical } from 'lucide-react'
 import { cn, STATUS_COLORS, STATUS_LABELS, PRIORITY_LABELS, getInitials } from '@/lib/utils'
@@ -427,15 +428,20 @@ function SortableTaskRow({
 
         {/* Assignee (desktop) */}
         {task.assignee && (
-          <div className="hidden sm:flex items-center gap-2 min-w-0">
+          <Link
+            href={`/u/${task.assignee.id}`}
+            onClick={(e) => e.stopPropagation()}
+            className="hidden sm:flex items-center gap-2 min-w-0 hover:opacity-80"
+            title={`View ${task.assignee.name || task.assignee.email}'s profile`}
+          >
             <Avatar className="h-6 w-6 flex-shrink-0">
               <AvatarImage src={task.assignee.image ?? undefined} />
               <AvatarFallback className="text-[10px] bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-400">
                 {getInitials(task.assignee.name || task.assignee.email || 'U')}
               </AvatarFallback>
             </Avatar>
-            <span className="text-xs text-gray-3 truncate">{task.assignee.name || task.assignee.email}</span>
-          </div>
+            <span className="text-xs text-gray-3 truncate hover:text-indigo-600">{task.assignee.name || task.assignee.email}</span>
+          </Link>
         )}
       </div>
 

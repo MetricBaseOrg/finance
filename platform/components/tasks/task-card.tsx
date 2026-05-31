@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { format } from 'date-fns'
@@ -125,12 +126,20 @@ export function TaskCard({ task, onClick, isDragging }: TaskCardProps) {
           )}
         </div>
         {task.assignee && (
-          <Avatar className="h-6 w-6">
-            <AvatarImage src={task.assignee.image ?? undefined} />
-            <AvatarFallback className="text-[10px] bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300">
-              {getInitials(task.assignee.name || task.assignee.email || 'U')}
-            </AvatarFallback>
-          </Avatar>
+          <Link
+            href={`/u/${task.assignee.id}`}
+            onClick={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
+            title={`View ${task.assignee.name || task.assignee.email}'s profile`}
+            className="hover:opacity-80"
+          >
+            <Avatar className="h-6 w-6">
+              <AvatarImage src={task.assignee.image ?? undefined} />
+              <AvatarFallback className="text-[10px] bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300">
+                {getInitials(task.assignee.name || task.assignee.email || 'U')}
+              </AvatarFallback>
+            </Avatar>
+          </Link>
         )}
       </div>
     </div>

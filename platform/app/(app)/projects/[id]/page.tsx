@@ -14,6 +14,7 @@ import { CalendarView } from '@/components/tasks/calendar-view'
 import { TimelineView } from '@/components/tasks/timeline-view'
 import { SCurveView } from '@/components/tasks/s-curve-view'
 import { TaskDetail } from '@/components/tasks/task-detail'
+import { ProjectFinanceCard } from '@/components/projects/project-finance-card'
 import { NewTaskDialog } from '@/components/tasks/new-task-dialog'
 import toast from 'react-hot-toast'
 
@@ -265,6 +266,9 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
 
       {/* View content */}
       <div className="flex-1 overflow-auto p-3 sm:p-6">
+        <div className="mb-4 max-w-md">
+          <ProjectFinanceCard projectId={id} />
+        </div>
         {view === 'kanban' && (
           <KanbanBoard
             tasks={tasks}
