@@ -12,8 +12,13 @@ const canManage = (role: string) => role === 'OWNER' || role === 'ADMIN'
 export async function GET() {
   const ctx = await getFieldContext()
   if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  // Dashboards are an OWNER/ADMIN-managed shared resource: list only those
+  // authored by a manager of the active org. This also hides legacy rows that
+  // members auto-created before the model became admin-managed.
   const dashboards = await prisma.userDashboard.findMany({
-    where: { user: { members: { some: { organizationId: ctx.organizationId } } } },
+    where: {
+      user: { members: { some: { organizationId: ctx.organizationId, role: { in: ['OWNER', 'ADMIN'] } } } },
+    },
     orderBy: { createdAt: 'asc' },
     include: { user: { select: { name: true, email: true } } },
   })
