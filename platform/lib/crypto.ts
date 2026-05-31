@@ -30,3 +30,19 @@ export function decryptToken(blob: string): string {
   decipher.setAuthTag(tag)
   return Buffer.concat([decipher.update(ct), decipher.final()]).toString('utf8')
 }
+
+/** Best-effort decrypt that returns null instead of throwing (for optional secrets). */
+export function tryDecryptToken(blob: string | null | undefined): string | null {
+  if (!blob) return null
+  try {
+    return decryptToken(blob)
+  } catch {
+    return null
+  }
+}
+
+/** Safe display hint for a secret — never the full value. "sk-abc…wxyz". */
+export function maskSecret(plain: string): string {
+  if (plain.length <= 8) return '••••'
+  return `${plain.slice(0, 3)}…${plain.slice(-4)}`
+}

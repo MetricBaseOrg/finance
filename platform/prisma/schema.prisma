@@ -127,6 +127,12 @@ model Organization {
   // Used by the Projects module workspace UI (ProBase carried these on Workspace).
   description  String?
   color        String   @default("#6366f1")
+  // Per-workspace AI provider config (overrides ANTHROPIC_* env when set).
+  // The API key is stored encrypted (AES-256-GCM via lib/crypto) and never
+  // returned to the client.
+  aiApiKeyEnc  String?
+  aiBaseUrl    String?
+  aiModel      String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 

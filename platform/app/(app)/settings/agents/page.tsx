@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { getOrgContext } from "@/lib/org";
 import { db } from "@/server/db";
-import { isAIConfigured } from "@/lib/anthropic";
+import { resolveAi } from "@/lib/anthropic";
 import { Eyebrow } from "@/components/mb/Eyebrow";
 import { BunEmpty } from "@/components/mb/BunEmpty";
 import { AgentCreateForm } from "./AgentCreateForm";
 import { AgentRowActions } from "./AgentRowActions";
+import { AiProviderForm } from "./AiProviderForm";
 
 export const dynamic = "force-dynamic";
 
@@ -28,6 +29,13 @@ export default async function AgentsSettingsPage() {
   });
   const roleByUser = new Map(memberships.map((m) => [m.userId, m.role]));
 
+  const orgAi = await db.organization.findUnique({
+    where: { id: activeOrg.id },
+    select: { aiBaseUrl: true, aiModel: true, aiApiKeyEnc: true },
+  });
+  const resolved = await resolveAi(activeOrg.id);
+  const aiConfigured = Boolean(resolved);
+
   return (
     <div className="flex flex-col gap-8 max-w-[1240px] mx-auto px-6 py-8">
       <Link
@@ -48,11 +56,11 @@ export default async function AgentsSettingsPage() {
         </p>
       </header>
 
-      {!isAIConfigured() && (
+      {!aiConfigured && (
         <div className="mb-card px-4 py-3 border border-[var(--border-str)]">
           <p className="font-mono text-xs text-[var(--color-down)]">
-            AI is not configured (ANTHROPIC_API_KEY missing). Agents can be created but won&apos;t run
-            until the key is set.
+            AI is not configured. Set a workspace API key below (or the deployment&apos;s
+            ANTHROPIC_API_KEY). Agents can be created but won&apos;t run until a key is set.
           </p>
         </div>
       )}
@@ -62,7 +70,16 @@ export default async function AgentsSettingsPage() {
           Only workspace owners and admins can manage agents.
         </div>
       ) : (
-        <AgentCreateForm slug={activeOrg.slug} />
+        <>
+          <AiProviderForm
+            slug={activeOrg.slug}
+            baseUrl={orgAi?.aiBaseUrl ?? ""}
+            model={orgAi?.aiModel ?? ""}
+            hasWorkspaceKey={Boolean(orgAi?.aiApiKeyEnc)}
+            source={resolved ? resolved.source : "none"}
+          />
+          <AgentCreateForm slug={activeOrg.slug} />
+        </>
       )}
 
       <div className="flex flex-col gap-3">

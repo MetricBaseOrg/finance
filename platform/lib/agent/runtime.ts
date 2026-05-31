@@ -1,6 +1,6 @@
 import type Anthropic from '@anthropic-ai/sdk'
 import { prisma } from '@/lib/prisma'
-import { anthropic, DEFAULT_MODEL } from '@/lib/anthropic'
+import { getOrgAnthropic } from '@/lib/anthropic'
 import { isRole } from '@/lib/permissions'
 import { buildSystemPrompt, buildTaskTriggerMessage, buildChatTriggerMessage } from '@/lib/agent/context'
 import { createComment } from '@/lib/comments/create'
@@ -35,11 +35,13 @@ export async function runAgentRun(runId: string): Promise<void> {
   })
   if (claimed.count === 0) return
 
-  const client = anthropic()
-  if (!client) {
-    await fail(runId, 'AI is not configured (ANTHROPIC_API_KEY missing).')
+  // Resolve provider config for this workspace (org settings over env).
+  const ai = await getOrgAnthropic(run.organizationId)
+  if (!ai) {
+    await fail(runId, 'AI is not configured (no workspace key and ANTHROPIC_API_KEY missing).')
     return
   }
+  const client = ai.client
 
   const agent = run.agent
   if (!agent.enabled) {
@@ -99,7 +101,7 @@ export async function runAgentRun(runId: string): Promise<void> {
   try {
     for (let step = 0; step < MAX_STEPS; step++) {
       const resp = await client.messages.create({
-        model: agent.model || DEFAULT_MODEL,
+        model: agent.model || ai.model,
         max_tokens: MAX_TOKENS,
         system,
         tools: toolDefinitions(tools),
