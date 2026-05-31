@@ -115,3 +115,22 @@ export function asNumber(v: unknown): number | null {
   const n = typeof v === 'string' ? Number(v) : (v as number)
   return Number.isFinite(n) ? n : null
 }
+
+// Flatten an analytics object to its numeric leaves, so KPI widgets can target
+// either flat metric sets or the engine's nested cards (ops-kpis returns
+// { production: { today, … }, lifting: { ytd, … } } → "production today", …).
+export function flattenNumbers(obj: Record<string, unknown>, maxDepth = 2): [string, number][] {
+  const out: [string, number][] = []
+  const walk = (o: Record<string, unknown>, prefix: string, depth: number) => {
+    for (const [k, v] of Object.entries(o)) {
+      const label = (prefix ? `${prefix} ${k}` : k).replace(/_/g, ' ')
+      const num = asNumber(v)
+      if (num != null) out.push([label, num])
+      else if (v && typeof v === 'object' && !Array.isArray(v) && depth < maxDepth) {
+        walk(v as Record<string, unknown>, label, depth + 1)
+      }
+    }
+  }
+  walk(obj, '', 0)
+  return out
+}

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Btn, wsField, WsLabel } from '@/app/home/ui'
 import {
-  SOURCES, sourcesFor, WIDGET_TYPES, newWidgetId, asNumber,
+  SOURCES, sourcesFor, WIDGET_TYPES, newWidgetId, flattenNumbers,
   type Widget, type WidgetType,
 } from '@/lib/field/widgets'
 
@@ -19,7 +19,7 @@ function useKpiKeys(source: string | undefined, active: boolean): string[] {
     fetch(src.url).then(async (r) => {
       if (!alive || !r.ok) return
       const d = await r.json().catch(() => ({}))
-      if (alive && d && typeof d === 'object') setKeys(Object.entries(d).filter(([, v]) => asNumber(v) != null).map(([k]) => k))
+      if (alive && d && typeof d === 'object') setKeys(flattenNumbers(d as Record<string, unknown>).map(([k]) => k))
     }).catch(() => {})
     return () => { alive = false }
   }, [source, active])

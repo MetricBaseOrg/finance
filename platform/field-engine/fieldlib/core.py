@@ -46,6 +46,10 @@ def _translate(sql: str) -> str:
     sql = re.sub(r"\bdate\(\s*([A-Za-z_][\w.]*)\s*\)", r"substr(\1,1,10)", sql)
     # IFNULL → COALESCE (sqlite alias)
     sql = re.sub(r"\bIFNULL\b", "COALESCE", sql, flags=re.IGNORECASE)
+    # sqlite stores booleans as 0/1; Prisma maps `active` to a real Postgres
+    # boolean, which rejects `active=1`. Normalise the integer-boolean idiom.
+    sql = re.sub(r"\bactive\s*=\s*1\b", "active=true", sql, flags=re.IGNORECASE)
+    sql = re.sub(r"\bactive\s*=\s*0\b", "active=false", sql, flags=re.IGNORECASE)
     # positional placeholders
     sql = sql.replace("?", "%s")
     return sql

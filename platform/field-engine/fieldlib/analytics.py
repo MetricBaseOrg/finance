@@ -27,7 +27,7 @@ def get_today_summary(company_id):
                WHERE f.company_id=? AND f.sw_pct IS NOT NULL
                  AND f.date = (SELECT MAX(date) FROM flows f2
                                WHERE f2.node_id = f.node_id AND f2.sw_pct IS NOT NULL)
-               GROUP BY f.node_id
+               GROUP BY f.node_id, f.sw_pct, n.code, n.name, n.node_type
                ORDER BY n.node_type, n.code""",
             (company_id,)).fetchall()
         sw_rows = [dict(r) for r in sw_rows]
@@ -57,7 +57,7 @@ def get_today_summary(company_id):
                JOIN nodes fn ON fn.id = t.from_node_id
                JOIN nodes tn ON tn.id = t.to_node_id
                WHERE t.company_id=? AND t.date=?
-               GROUP BY t.from_node_id, t.to_node_id
+               GROUP BY t.from_node_id, t.to_node_id, fn.code, tn.code, fn.name, tn.name
                ORDER BY sent DESC""",
             (company_id, latest_date)).fetchall()
         transfers_today = []
@@ -84,7 +84,7 @@ def get_today_summary(company_id):
                LEFT JOIN nodes bn ON bn.id = l.buyer_node_id
                WHERE l.company_id=? AND l.status='completed'
                  AND substr(l.start_load,1,10)=?
-               GROUP BY l.from_node_id, l.buyer_node_id""",
+               GROUP BY l.from_node_id, l.buyer_node_id, fn.code, bn.code, fn.name, bn.name""",
             (company_id, latest_date)).fetchall()
         for r in lift_edges:
             if not r['from_code'] or not r['to_code']:
@@ -470,7 +470,7 @@ def get_node_inflow_series(company_id, date_from=None, date_to=None, days=365):
             q += " AND f.date >= date('now', ?)"
             params.append(f'-{days} days')
             
-        q += " GROUP BY f.date, f.node_id ORDER BY f.date"
+        q += " GROUP BY f.date, f.node_id, n.code, n.name ORDER BY f.date"
         return [dict(r) for r in conn.execute(q, params).fetchall()]
 
 
@@ -616,11 +616,9 @@ def get_ops_kpis(company_id, spark_days=14):
     """Five-card Operations Overview KPI strip — see module-level comment."""
     with get_db() as conn:
         # Per-company L/G threshold drives Card 5 (Oil Losses MTD) target_pct.
-        # Defaults to 0.5% when the column is missing or NULL (fresh DBs).
-        thr_row = conn.execute(
-            "SELECT COALESCE(lg_threshold_pct, 0.5) as t FROM companies WHERE id=?",
-            (company_id,)).fetchone()
-        lg_threshold_pct = float(thr_row['t']) if thr_row and thr_row['t'] is not None else 0.5
+        # The platform schema (Prisma `Organization`) has no per-org threshold
+        # column, so default to the spec value of 0.5%.
+        lg_threshold_pct = 0.5
 
         # Anchor date = latest day with ANY flow data; fall back to today.
         anchor_row = conn.execute(

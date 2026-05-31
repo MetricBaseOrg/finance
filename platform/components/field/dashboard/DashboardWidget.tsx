@@ -6,7 +6,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip,
 } from 'recharts'
 import { KTile } from '@/app/home/ui'
-import { SOURCES, asNumber, fmtNum, inferFields, type Widget } from '@/lib/field/widgets'
+import { SOURCES, asNumber, flattenNumbers, fmtNum, inferFields, type Widget } from '@/lib/field/widgets'
 
 const TEAL = 'var(--c-fieldflow)'
 const PIE_COLORS = ['var(--c-fieldflow)', '#6aa9c9', '#c9a84c', '#8a9bb5', '#5fb8a3', '#b5826a', '#7a6fb0']
@@ -65,14 +65,12 @@ function KpiWidget({ widget }: { widget: Widget }) {
   if (state.kind === 'offline') return <Note>Compute engine offline</Note>
   if (state.kind !== 'object') return <Note>This source has no KPI values</Note>
 
-  const entries = Object.entries(state.data)
-    .map(([k, v]) => [k, asNumber(v)] as const)
-    .filter(([, v]) => v != null) as [string, number][]
+  const entries = flattenNumbers(state.data)
   if (!entries.length) return <Note>No numeric metrics in range</Note>
 
   const picked = widget.metric ? entries.find(([k]) => k === widget.metric) : entries[0]
   if (!picked) return <Note>Metric “{widget.metric}” not found</Note>
-  return <KTile label={picked[0].replace(/_/g, ' ')} value={fmtNum(picked[1])} unit={widget.unit} accent={TEAL} />
+  return <KTile label={picked[0]} value={fmtNum(picked[1])} unit={widget.unit} accent={TEAL} />
 }
 
 // ── Formula ───────────────────────────────────────────────────────────────────
