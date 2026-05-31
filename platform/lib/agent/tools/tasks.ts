@@ -193,6 +193,16 @@ const createTask: AgentTool = {
     })
     if (project?.organizationId !== ctx.organizationId) return { error: 'Project not found in this workspace.' }
 
+    // Subtasks inherit the parent's assignee when none is given.
+    let effectiveAssigneeId: string | null = input.assigneeId ?? null
+    if (input.parentId && !effectiveAssigneeId) {
+      const parent = await prisma.task.findFirst({
+        where: { id: input.parentId, projectId: input.projectId },
+        select: { assigneeId: true },
+      })
+      if (parent?.assigneeId) effectiveAssigneeId = parent.assigneeId
+    }
+
     const lastTask = await prisma.task.findFirst({
       where: { projectId: input.projectId, status: 'TODO' },
       orderBy: { order: 'desc' },
@@ -207,7 +217,7 @@ const createTask: AgentTool = {
         dueDate: input.dueDate ? new Date(input.dueDate) : undefined,
         projectId: input.projectId,
         creatorId: ctx.agentUserId,
-        assigneeId: input.assigneeId,
+        assigneeId: effectiveAssigneeId,
         parentId: input.parentId,
         order: (lastTask?.order ?? 0) + 1000,
       },

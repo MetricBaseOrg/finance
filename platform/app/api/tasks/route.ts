@@ -73,6 +73,17 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Your role does not permit creating tasks.' }, { status: 403 })
   }
 
+  // Subtasks inherit the parent's assignee when none is given, so they don't
+  // land as "Unassigned" under a parent that already has an owner.
+  let effectiveAssigneeId: string | null = assigneeId ?? null
+  if (parentId && !effectiveAssigneeId) {
+    const parent = await prisma.task.findFirst({
+      where: { id: parentId, projectId },
+      select: { assigneeId: true },
+    })
+    if (parent?.assigneeId) effectiveAssigneeId = parent.assigneeId
+  }
+
   const lastTask = await prisma.task.findFirst({
     where: { projectId, status: status || 'TODO' },
     orderBy: { order: 'desc' },
@@ -89,7 +100,7 @@ export async function POST(req: Request) {
       startDate: startDate ? new Date(startDate) : undefined,
       projectId,
       creatorId: session.user.id,
-      assigneeId,
+      assigneeId: effectiveAssigneeId,
       parentId,
       milestoneId,
       order: (lastTask?.order ?? 0) + 1000,
