@@ -1,6 +1,7 @@
 import 'server-only'
 import { prisma } from '@/lib/prisma'
 import { logActivity, notify } from '@/lib/activity'
+import { isValidRecurrence } from '@/lib/recurrence'
 
 /**
  * FieldFlow → ProBase bridge. Field work assigned to a user is recorded as a
@@ -85,8 +86,11 @@ type CreateFieldTaskInput = {
   title: string
   description?: string | null
   assigneeId?: string | null
+  startDate?: string | null
   dueDate?: string | null
   priority?: string | null
+  recurrence?: string | null
+  recurrenceEnd?: string | null
   refType?: FieldRefType | null
   refId?: string | null
 }
@@ -111,6 +115,7 @@ export async function createFieldTask(input: CreateFieldTaskInput) {
       description: input.description ?? null,
       status: 'TODO',
       priority: input.priority || 'MEDIUM',
+      startDate: input.startDate ? new Date(input.startDate) : undefined,
       dueDate: input.dueDate ? new Date(input.dueDate) : undefined,
       projectId: project.id,
       creatorId: input.creatorId,
@@ -118,6 +123,8 @@ export async function createFieldTask(input: CreateFieldTaskInput) {
       order: (lastTask?.order ?? 0) + 1000,
       fieldRefType: input.refType ?? null,
       fieldRefId: input.refId ?? null,
+      ...(isValidRecurrence(input.recurrence) && { recurrence: input.recurrence }),
+      ...(input.recurrenceEnd && { recurrenceEnd: new Date(input.recurrenceEnd) }),
     },
     include: {
       assignee: { select: { id: true, name: true, email: true, image: true } },

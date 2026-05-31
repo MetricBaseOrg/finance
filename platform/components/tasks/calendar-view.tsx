@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isSameMonth, isToday, isSameDay } from 'date-fns'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { formatTime } from '@/lib/tasks/when'
 
 interface Task {
   id: string
@@ -119,6 +120,7 @@ export function CalendarView({ tasks, onTaskClick }: CalendarViewProps) {
                   >
                     <div className={cn('w-1.5 h-1.5 rounded-full flex-shrink-0', PRIORITY_DOT[task.priority])} />
                     <span className="text-xs text-gray-2 truncate group-hover:text-indigo-600 transition-colors">
+                      {formatTime(task.dueDate) && <span className="text-gray-4 mr-1 font-mono">{formatTime(task.dueDate)}</span>}
                       {task.title}
                     </span>
                   </button>

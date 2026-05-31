@@ -68,6 +68,17 @@ export function TimelineView({ tasks, expandedTaskIds, onToggleExpand, onTaskCli
   const nameColRef  = useRef<HTMLDivElement>(null)
   const syncingRef  = useRef(false)
 
+  // Frozen name column narrows on small screens so the timeline grid keeps usable
+  // width (208px would swallow most of a phone viewport).
+  const [nameW, setNameW] = useState(NAME_W)
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 640px)')
+    const apply = () => setNameW(mq.matches ? 132 : NAME_W)
+    apply()
+    mq.addEventListener('change', apply)
+    return () => mq.removeEventListener('change', apply)
+  }, [])
+
   // 3-month window: prev + current + next
   const rangeStart = useMemo(() => startOfMonth(subMonths(anchorDate, 1)), [anchorDate])
   const rangeEnd   = useMemo(() => endOfMonth(addMonths(anchorDate, 1)),   [anchorDate])
@@ -191,11 +202,11 @@ export function TimelineView({ tasks, expandedTaskIds, onToggleExpand, onTaskCli
     <div className="bg-bg-card rounded-xl border border-line overflow-hidden flex flex-col">
 
       {/* ── Toolbar ─────────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-line flex-shrink-0">
-        <h2 className="text-lg font-semibold text-gray-1">
-          Timeline — {format(anchorDate, 'MMMM yyyy')}
+      <div className="flex items-center justify-between gap-2 px-3 sm:px-6 py-3 sm:py-4 border-b border-line flex-shrink-0">
+        <h2 className="text-base sm:text-lg font-semibold text-gray-1 truncate min-w-0">
+          <span className="hidden sm:inline">Timeline — </span>{format(anchorDate, 'MMMM yyyy')}
         </h2>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-shrink-0">
           <button
             onClick={() => setAnchorDate(d => subMonths(d, 1))}
             className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors"
@@ -223,7 +234,7 @@ export function TimelineView({ tasks, expandedTaskIds, onToggleExpand, onTaskCli
         {/* ── LEFT: frozen name column ─────────────────────────────────── */}
         <div
           className="flex-shrink-0 border-r border-line flex flex-col z-10"
-          style={{ width: NAME_W }}
+          style={{ width: nameW }}
         >
           {/* Header placeholder aligned to timeline header height */}
           <div

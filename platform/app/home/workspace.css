@@ -232,8 +232,10 @@ html:has([data-app="workspace"])  { --grid-line: rgba(255, 255, 255, 0.01); }
 @media (max-width: 860px) { .ws-brandpanel { display: none !important; } }
 
 /* ── Small-screen overflow fixes ─────────────────────────────────────────── */
-/* Wide tables scroll inside their card instead of pushing the page width. */
-.ws-card:has(table) { overflow-x: auto; }
+/* Wide tables scroll inside their card instead of pushing the page width.
+   Specificity raised to `.mb-root .ws-card` so this beats the blanket
+   `overflow-x: clip` below — otherwise wide tables get clipped, not scrolled. */
+.mb-root .ws-card:has(table) { overflow-x: auto; }
 
 /* FieldFlow dashboard builder grid: 4 cols on desktop, collapsing to 2 then 1.
    Widgets use `grid-column: span N`; auto-placement clamps the span to the

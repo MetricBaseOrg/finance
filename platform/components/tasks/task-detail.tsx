@@ -14,6 +14,7 @@ import { AIBreakdownButton } from './ai-breakdown-button'
 import { AISummarizeComments } from './ai-summarize-comments'
 import { AskAgentButton } from './ask-agent-button'
 import { cn, STATUS_LABELS, PRIORITY_LABELS, STATUS_COLORS, PRIORITY_BG, getInitials } from '@/lib/utils'
+import { toLocalInput, localInputToIso } from '@/lib/tasks/when'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -505,20 +506,20 @@ export function TaskDetail({ taskId, initialTask, userRole, currentUserId, onClo
               {/* Dates */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-medium text-gray-3 mb-1.5">Start Date</label>
+                  <label className="block text-xs font-medium text-gray-3 mb-1.5">Start</label>
                   <input
-                    type="date"
-                    defaultValue={task.startDate ? task.startDate.split('T')[0] : ''}
-                    onChange={e => update({ startDate: e.target.value || null } as Partial<Task>)}
+                    type="datetime-local"
+                    defaultValue={toLocalInput(task.startDate)}
+                    onChange={e => update({ startDate: localInputToIso(e.target.value) } as Partial<Task>)}
                     className="flex h-8 w-full rounded-lg border border-line bg-bg-card px-3 py-1 text-xs text-gray-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-3 mb-1.5">Due Date</label>
+                  <label className="block text-xs font-medium text-gray-3 mb-1.5">Due</label>
                   <input
-                    type="date"
-                    defaultValue={task.dueDate ? task.dueDate.split('T')[0] : ''}
-                    onChange={e => update({ dueDate: e.target.value || null } as Partial<Task>)}
+                    type="datetime-local"
+                    defaultValue={toLocalInput(task.dueDate)}
+                    onChange={e => update({ dueDate: localInputToIso(e.target.value) } as Partial<Task>)}
                     className="flex h-8 w-full rounded-lg border border-line bg-bg-card px-3 py-1 text-xs text-gray-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
                   />
                 </div>

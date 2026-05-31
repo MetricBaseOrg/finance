@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { STATUS_LABELS, PRIORITY_LABELS } from '@/lib/utils'
+import { localInputToIso } from '@/lib/tasks/when'
 import toast from 'react-hot-toast'
 
 interface Member {
@@ -92,8 +93,8 @@ export function NewTaskDialog({ open, onOpenChange, projectId, organizationId, d
           description: description || undefined,
           status,
           priority,
-          dueDate: dueDate || undefined,
-          startDate: startDate || undefined,
+          dueDate: localInputToIso(dueDate) || undefined,
+          startDate: localInputToIso(startDate) || undefined,
           assigneeId: assigneeId || undefined,
           projectId,
         }),
@@ -189,18 +190,18 @@ export function NewTaskDialog({ open, onOpenChange, projectId, organizationId, d
               </Select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-3 mb-1">Start Date</label>
+              <label className="block text-xs font-medium text-gray-3 mb-1">Start</label>
               <input
-                type="date"
+                type="datetime-local"
                 value={startDate}
                 onChange={e => setStartDate(e.target.value)}
                 className="flex h-9 w-full rounded-lg border border-line bg-bg-card px-3 py-1 text-sm text-gray-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-3 mb-1">Due Date</label>
+              <label className="block text-xs font-medium text-gray-3 mb-1">Due</label>
               <input
-                type="date"
+                type="datetime-local"
                 value={dueDate}
                 onChange={e => setDueDate(e.target.value)}
                 className="flex h-9 w-full rounded-lg border border-line bg-bg-card px-3 py-1 text-sm text-gray-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"

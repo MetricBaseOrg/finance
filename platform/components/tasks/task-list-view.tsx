@@ -1,8 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { format } from 'date-fns'
 import { AlertCircle, ArrowUp, ArrowDown, Minus, Flag, Calendar, ChevronDown, ChevronRight, Check, GripVertical } from 'lucide-react'
+import { formatWhen } from '@/lib/tasks/when'
 import { cn, STATUS_COLORS, STATUS_LABELS, PRIORITY_LABELS, getInitials } from '@/lib/utils'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
@@ -423,7 +423,7 @@ function SortableTaskRow({
 
         {/* Desktop due date */}
         <span className={cn('hidden sm:inline text-xs', isOverdue ? 'text-red-500 font-medium' : 'text-gray-3')}>
-          {task.dueDate ? format(new Date(task.dueDate), 'MMM d') : '—'}
+          {task.dueDate ? formatWhen(task.dueDate) : '—'}
         </span>
 
         {/* Assignee (desktop) */}

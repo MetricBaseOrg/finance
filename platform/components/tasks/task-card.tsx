@@ -3,9 +3,9 @@
 import Link from 'next/link'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { format } from 'date-fns'
 import { Calendar, MessageSquare, Paperclip, AlertCircle, ArrowUp, ArrowDown, Minus, Flag, Link2, Repeat } from 'lucide-react'
 import { cn, PRIORITY_BG, PRIORITY_LABELS, STATUS_COLORS, STATUS_LABELS, getInitials } from '@/lib/utils'
+import { formatWhen } from '@/lib/tasks/when'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 
 interface Task {
@@ -92,7 +92,7 @@ export function TaskCard({ task, onClick, isDragging }: TaskCardProps) {
           {task.dueDate && (
             <div className={cn('flex items-center gap-1 text-xs', isOverdue ? 'text-red-500 dark:text-red-400' : 'text-gray-3')}>
               <Calendar className="h-3 w-3" />
-              <span>{format(new Date(task.dueDate), 'MMM d')}</span>
+              <span>{formatWhen(task.dueDate)}</span>
             </div>
           )}
           {(task._count?.comments ?? 0) > 0 && (

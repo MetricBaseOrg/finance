@@ -36,7 +36,9 @@ export function advanceDate(date: Date, kind: RecurrenceKind): Date {
  * lacks the info to compute the next due date).
  *
  * Carries forward: title, description, priority, project, assignee, milestone,
- *                  labels, recurrence, recurrenceEnd, recurringFromId.
+ *                  labels, recurrence, recurrenceEnd, recurringFromId, and the
+ *                  FieldFlow link (fieldRefType/fieldRefId) so recurring field
+ *                  tasks keep pointing at their node/lifting.
  * Does NOT carry: comments, activity log, attachments, subtasks, dependencies,
  *                 _count, status (always TODO), order (default).
  */
@@ -89,6 +91,8 @@ export async function spawnNextRecurringInstance(taskId: string, actorId: string
       recurrence:   src.recurrence,
       recurrenceEnd: src.recurrenceEnd,
       recurringFromId,
+      fieldRefType: src.fieldRefType,
+      fieldRefId:   src.fieldRefId,
       ...(src.labels.length > 0 && {
         labels: { connect: src.labels.map(l => ({ id: l.id })) },
       }),

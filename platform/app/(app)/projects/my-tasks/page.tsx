@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
-import { format } from 'date-fns'
 import { CheckSquare, Check, ChevronDown, ChevronRight } from 'lucide-react'
+import { formatWhen } from '@/lib/tasks/when'
 import toast from 'react-hot-toast'
 import { cn, STATUS_COLORS, STATUS_LABELS, PRIORITY_LABELS, PRIORITY_BG } from '@/lib/utils'
 import { TaskDetail } from '@/components/tasks/task-detail'
@@ -270,6 +270,13 @@ export default function MyTasksPage() {
                               Needs review
                             </span>
                           )}
+                          {/* Reviewer context: who submitted it (admin/owner only). Lives here,
+                              not in the status/priority grid row, so it doesn't claim the Due column. */}
+                          {task.status === 'IN_REVIEW' && task.assignee && task.assignee.id !== session?.user?.id && (userRole === 'ADMIN' || userRole === 'OWNER') && (
+                            <span className="text-[10px] text-gray-3 bg-bg-hover rounded-full px-2 py-0.5 border border-line flex-shrink-0">
+                              by {task.assignee.name || task.assignee.email || 'Unknown'}
+                            </span>
+                          )}
                           {hasSubs && (
                             <span className="text-[10px] font-mono text-gray-3 bg-bg-hover rounded px-1.5 py-0.5 flex-shrink-0 border border-line">
                               {doneSubs}/{subs.length}
@@ -285,8 +292,8 @@ export default function MyTasksPage() {
                       </div>
                       {/* Mobile: due date inline (right) */}
                       {task.dueDate && (
-                        <span className={cn('sm:hidden text-xs flex-shrink-0 ml-2', isOverdue ? 'text-red-500 font-medium' : 'text-gray-3')}>
-                          {format(new Date(task.dueDate), 'MMM d')}
+                        <span className={cn('sm:hidden text-xs flex-shrink-0 ml-2 whitespace-nowrap', isOverdue ? 'text-red-500 font-medium' : 'text-gray-3')}>
+                          {formatWhen(task.dueDate)}
                         </span>
                       )}
                     </div>
@@ -298,16 +305,10 @@ export default function MyTasksPage() {
                       <span className={cn('text-xs font-medium px-2 py-0.5 rounded-full w-fit', PRIORITY_BG[task.priority])}>
                         {PRIORITY_LABELS[task.priority]}
                       </span>
-                      {/* Show assignee for review tasks (admin/owner) */}
-                      {task.status === 'IN_REVIEW' && task.assignee && task.assignee.id !== session?.user?.id && (userRole === 'ADMIN' || userRole === 'OWNER') && (
-                        <span className="text-[10px] text-gray-3 bg-bg-hover rounded-full px-2 py-0.5 border border-line flex-shrink-0">
-                          by {task.assignee.name || task.assignee.email || 'Unknown'}
-                        </span>
-                      )}
                     </div>
                     {/* Desktop-only due column */}
-                    <span className={cn('hidden sm:inline text-xs', isOverdue ? 'text-red-500 font-medium' : 'text-gray-3')}>
-                      {task.dueDate ? format(new Date(task.dueDate), 'MMM d') : '—'}
+                    <span className={cn('hidden sm:inline text-xs whitespace-nowrap', isOverdue ? 'text-red-500 font-medium' : 'text-gray-3')}>
+                      {task.dueDate ? formatWhen(task.dueDate) : '—'}
                     </span>
                   </div>
                   {/* Expanded subtasks */}

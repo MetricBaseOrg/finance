@@ -238,7 +238,8 @@ export const KTile = ({ label, value, unit, delta, tone = 'neutral', spark, acce
 
 // Form atoms styled on the new tokens.
 export const wsField: React.CSSProperties = {
-  width: '100%', background: 'var(--mb-surface)', border: '1px solid var(--mb-border)',
+  width: '100%', boxSizing: 'border-box', minWidth: 0,
+  background: 'var(--mb-surface)', border: '1px solid var(--mb-border)',
   borderRadius: 'var(--mb-radius-sm)', color: 'var(--mb-ink)', fontFamily: 'inherit',
   fontSize: 12.5, padding: '8px 10px', outline: 'none',
 }
