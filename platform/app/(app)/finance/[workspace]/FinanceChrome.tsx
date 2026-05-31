@@ -21,5 +21,5 @@ export function FinanceChrome({ slug, orgName }: { slug: string; orgName: string
     [...tabs].reverse().find((t) => pathname.startsWith(t.id === 'settings' ? `${base}/settings` : t.href))?.id ||
     'dashboard'
 
-  return <AppHeader app="metricbase" breadcrumb={`Finance · ${orgName}`} title="Finance" tabs={tabs} active={active} />
+  return <AppHeader app="metricbase" breadcrumb={`Finance · ${orgName}`} title="Finance" tabs={tabs} active={active} hideTitle />
 }

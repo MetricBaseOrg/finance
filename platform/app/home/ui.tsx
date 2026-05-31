@@ -170,7 +170,10 @@ export const AppHeader = ({ app, title, breadcrumb, tabs, active, right, hideTit
   app: AppId; title: string; breadcrumb?: string
   tabs?: { id: string; label: string; href: string }[]; active?: string; right?: React.ReactNode
   hideTitle?: boolean
-}) => (
+}) => {
+  // Nothing to show: title suppressed and no tabs → render no header bar.
+  if (hideTitle && (!tabs || tabs.length === 0)) return null
+  return (
   <div style={{ borderBottom: '1px solid var(--mb-border)', background: 'var(--mb-surface)' }}>
     <div style={{ maxWidth: 'var(--ws-maxw)', margin: '0 auto', padding: '0 var(--ws-gutter)' }}>
       {!hideTitle && (
@@ -195,7 +198,8 @@ export const AppHeader = ({ app, title, breadcrumb, tabs, active, right, hideTit
       )}
     </div>
   </div>
-)
+  )
+}
 
 export const Panel = ({ title, sub, right, children, pad = 16, style }: {
   title?: string; sub?: string; right?: React.ReactNode; children: React.ReactNode; pad?: number; style?: React.CSSProperties

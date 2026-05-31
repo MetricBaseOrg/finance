@@ -32,6 +32,7 @@ export function FieldChrome() {
       title="FieldFlow"
       tabs={TABS}
       active={active}
+      hideTitle
     />
   )
 }
