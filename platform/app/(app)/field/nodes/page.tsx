@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import toast from 'react-hot-toast'
 import { Panel, Btn, Pill, wsField, WsLabel } from '@/app/home/ui'
 
@@ -58,7 +59,10 @@ export default function NodesPage() {
                   <td style={{ padding: '10px 16px', fontSize: 12.5, color: 'var(--mb-ink)' }}>{n.name}{!n.active && <Pill style={{ marginLeft: 8 }}>archived</Pill>}</td>
                   <td style={{ padding: '10px 16px', fontSize: 11.5, color: 'var(--mb-ink-muted)', textTransform: 'uppercase' }}>{n.nodeType}</td>
                   <td className="mb-num" style={{ padding: '10px 16px', fontSize: 12.5, color: 'var(--mb-ink)', textAlign: 'right' }}>{n.openingStock.toLocaleString()}</td>
-                  <td style={{ padding: '8px 16px', textAlign: 'right' }}><Btn kind="quiet" onClick={() => remove(n.id)} style={{ color: 'var(--mb-bad-ink)' }}>Delete</Btn></td>
+                  <td style={{ padding: '8px 16px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                    <Link href={`/field/tasks?refType=node&refId=${n.id}&refLabel=${encodeURIComponent(`${n.code} · ${n.name}`)}&title=${encodeURIComponent(`Work at ${n.code}`)}`} style={{ color: 'var(--c-fieldflow)', textDecoration: 'none', fontSize: 11.5, fontWeight: 600, marginRight: 12 }}>Assign task</Link>
+                    <Btn kind="quiet" onClick={() => remove(n.id)} style={{ color: 'var(--mb-bad-ink)' }}>Delete</Btn>
+                  </td>
                 </tr>
               ))}
             </tbody>

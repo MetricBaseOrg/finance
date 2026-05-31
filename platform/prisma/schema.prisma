@@ -691,6 +691,8 @@ model Project {
   labels         Label[]
   finAccounts    FinAccount[]
   transactions   Transaction[]
+  // Auto-provisioned per org to hold FieldFlow-assigned work (see lib/field/tasks.ts).
+  isFieldOps     Boolean     @default(false)
 
   @@index([organizationId])
   @@index([createdById])
@@ -713,6 +715,10 @@ model Task {
   recurrence      String?
   recurrenceEnd   DateTime?
   recurringFromId String?
+  // Optional soft link back to the FieldFlow record this task was raised from.
+  // Polymorphic across node/flow/lifting/target (no FK) — type + id, nullable.
+  fieldRefType    String?
+  fieldRefId      String?
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
   project         Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
@@ -729,6 +735,7 @@ model Task {
   blockedBy       TaskDependency[] @relation("blocked")
 
   @@index([projectId])
+  @@index([fieldRefType, fieldRefId])
 }
 
 model TaskDependency {

@@ -10,6 +10,7 @@ const TABS = [
   { id: 'nodes', label: 'Nodes', href: '/field/nodes' },
   { id: 'flow-log', label: 'Flow Log', href: '/field/flow-log' },
   { id: 'liftings', label: 'Liftings', href: '/field/liftings' },
+  { id: 'tasks', label: 'Tasks', href: '/field/tasks' },
   { id: 'transfers', label: 'Transfers', href: '/field/transfers' },
   { id: 'targets', label: 'Targets', href: '/field/targets' },
   { id: 'formulas', label: 'Formulas', href: '/field/formulas' },

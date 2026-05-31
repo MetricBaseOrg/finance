@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import toast from 'react-hot-toast'
 import { Panel, Btn, wsField, WsLabel } from '@/app/home/ui'
 
@@ -52,9 +53,9 @@ export default function LiftingsPage() {
       <Panel title="Liftings" pad={0}>
         {loading ? <div style={{ padding: 18, color: 'var(--mb-ink-muted)', fontSize: 12.5 }}>Loading…</div> : (
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead><tr>{['Tanker', 'From', 'Buyer', 'Nominated', 'Status'].map((h, i) => <th key={h} style={{ textAlign: i === 3 ? 'right' : 'left', fontSize: 10, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--mb-ink-soft)', padding: '10px 16px', fontFamily: 'var(--mb-font-mono)' }}>{h}</th>)}</tr></thead>
+            <thead><tr>{['Tanker', 'From', 'Buyer', 'Nominated', 'Status', ''].map((h, i) => <th key={h} style={{ textAlign: i === 3 ? 'right' : 'left', fontSize: 10, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--mb-ink-soft)', padding: '10px 16px', fontFamily: 'var(--mb-font-mono)' }}>{h}</th>)}</tr></thead>
             <tbody>
-              {rows.length === 0 && <tr><td colSpan={5} style={{ padding: 18, textAlign: 'center', color: 'var(--mb-ink-muted)', fontSize: 12.5 }}>No liftings.</td></tr>}
+              {rows.length === 0 && <tr><td colSpan={6} style={{ padding: 18, textAlign: 'center', color: 'var(--mb-ink-muted)', fontSize: 12.5 }}>No liftings.</td></tr>}
               {rows.map((l) => (
                 <tr key={l.id} style={{ borderTop: '1px solid var(--mb-divider)' }}>
                   <td style={{ padding: '10px 16px', fontSize: 12.5, color: 'var(--mb-ink)' }}>{l.tankerName}</td>
@@ -62,6 +63,7 @@ export default function LiftingsPage() {
                   <td className="mb-num" style={{ padding: '10px 16px', fontSize: 12, color: 'var(--mb-ink-muted)' }}>{l.buyerNode?.code ?? '—'}</td>
                   <td className="mb-num" style={{ padding: '10px 16px', fontSize: 12.5, color: 'var(--mb-ink)', textAlign: 'right' }}>{l.nominated?.toLocaleString() ?? '—'}</td>
                   <td style={{ padding: '8px 16px' }}><select style={{ ...wsField, padding: '5px 8px', width: 'auto' }} value={l.status} onChange={(e) => setStatus(l.id, e.target.value)}>{STATUS.map((s) => <option key={s} value={s}>{s}</option>)}</select></td>
+                  <td style={{ padding: '8px 16px', textAlign: 'right' }}><Link href={`/field/tasks?refType=lifting&refId=${l.id}&refLabel=${encodeURIComponent(l.tankerName)}&title=${encodeURIComponent(`Load cargo ${l.tankerName}`)}`} style={{ color: 'var(--c-fieldflow)', textDecoration: 'none', fontSize: 11.5, fontWeight: 600 }}>Assign task</Link></td>
                 </tr>
               ))}
             </tbody>
