@@ -1,0 +1,228 @@
+'use client'
+
+import { useCallback, useEffect, useRef, useState } from 'react'
+import toast from 'react-hot-toast'
+import { Btn, Icon, Panel } from '@/app/home/ui'
+import { parseLayout, type Dashboard, type Widget } from '@/lib/field/widgets'
+import { WidgetBody, widgetNeedsChartHeight } from './DashboardWidget'
+import { WidgetForm } from './WidgetForm'
+
+type Raw = { id: string; name: string; active: boolean; layoutJson: string }
+
+export function DashboardBuilder() {
+  const [dashboards, setDashboards] = useState<Dashboard[]>([])
+  const [currentId, setCurrentId] = useState<string | null>(null)
+  const [widgets, setWidgets] = useState<Widget[]>([])
+  const [editing, setEditing] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [formOpen, setFormOpen] = useState(false)
+  const [editWidget, setEditWidget] = useState<Widget | null>(null)
+  const dragFrom = useRef<number | null>(null)
+  const [dragOver, setDragOver] = useState<number | null>(null)
+
+  const current = dashboards.find((d) => d.id === currentId) ?? null
+
+  const selectDashboard = useCallback((d: Dashboard) => {
+    setCurrentId(d.id)
+    setWidgets(parseLayout(d.layoutJson).widgets)
+  }, [])
+
+  const load = useCallback(async (preferId?: string) => {
+    const r = await fetch('/api/field/dashboards')
+    if (!r.ok) { setLoading(false); return }
+    let list: Raw[] = await r.json().catch(() => [])
+    // Bootstrap a first dashboard if the user has none.
+    if (list.length === 0) {
+      const c = await fetch('/api/field/dashboards', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: 'My Dashboard' }) })
+      if (c.ok) { const created: Raw = await c.json(); await fetch(`/api/field/dashboards/${created.id}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ active: true }) }); list = [{ ...created, active: true }] }
+    }
+    setDashboards(list)
+    const pick = list.find((d) => d.id === preferId) ?? list.find((d) => d.active) ?? list[0]
+    if (pick) { setCurrentId(pick.id); setWidgets(parseLayout(pick.layoutJson).widgets) }
+    setLoading(false)
+  }, [])
+
+  useEffect(() => { load() }, [load])
+
+  // Persist the current widget array back to the active dashboard.
+  const persist = useCallback(async (next: Widget[]) => {
+    setWidgets(next)
+    if (!currentId) return
+    const layoutJson = JSON.stringify({ widgets: next })
+    setDashboards((ds) => ds.map((d) => (d.id === currentId ? { ...d, layoutJson } : d)))
+    const r = await fetch(`/api/field/dashboards/${currentId}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ layoutJson }) })
+    if (!r.ok) toast.error('Failed to save layout')
+  }, [currentId])
+
+  // ── Dashboard management ───────────────────────────────────────────────────
+  async function createDashboard() {
+    const name = window.prompt('New dashboard name', `Dashboard ${dashboards.length + 1}`)
+    if (!name?.trim()) return
+    const r = await fetch('/api/field/dashboards', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: name.trim() }) })
+    const d = await r.json().catch(() => ({}))
+    if (!r.ok) { toast.error(d?.error || 'Failed'); return }
+    toast.success('Dashboard created')
+    await load(d.id)
+    setEditing(true)
+  }
+
+  async function renameDashboard() {
+    if (!current) return
+    const name = window.prompt('Rename dashboard', current.name)
+    if (!name?.trim() || name.trim() === current.name) return
+    const r = await fetch(`/api/field/dashboards/${current.id}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: name.trim() }) })
+    if (!r.ok) { toast.error((await r.json().catch(() => ({})))?.error || 'Failed'); return }
+    setDashboards((ds) => ds.map((d) => (d.id === current.id ? { ...d, name: name.trim() } : d)))
+    toast.success('Renamed')
+  }
+
+  async function deleteDashboard() {
+    if (!current) return
+    if (!window.confirm(`Delete “${current.name}”? This can’t be undone.`)) return
+    const r = await fetch(`/api/field/dashboards/${current.id}`, { method: 'DELETE' })
+    if (!r.ok) { toast.error('Delete failed'); return }
+    toast.success('Deleted')
+    await load()
+  }
+
+  async function setActive() {
+    if (!current || current.active) return
+    const r = await fetch(`/api/field/dashboards/${current.id}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ active: true }) })
+    if (!r.ok) { toast.error('Failed'); return }
+    setDashboards((ds) => ds.map((d) => ({ ...d, active: d.id === current.id })))
+    toast.success('Set as default')
+  }
+
+  // ── Widget management ──────────────────────────────────────────────────────
+  function saveWidget(w: Widget) {
+    const idx = widgets.findIndex((x) => x.id === w.id)
+    persist(idx >= 0 ? widgets.map((x) => (x.id === w.id ? w : x)) : [...widgets, w])
+    setFormOpen(false); setEditWidget(null)
+  }
+  function removeWidget(id: string) { persist(widgets.filter((w) => w.id !== id)) }
+  function openAdd() { setEditWidget(null); setFormOpen(true) }
+  function openEdit(w: Widget) { setEditWidget(w); setFormOpen(true) }
+
+  function onDrop(to: number) {
+    const from = dragFrom.current
+    dragFrom.current = null; setDragOver(null)
+    if (from == null || from === to) return
+    const next = [...widgets]
+    const [moved] = next.splice(from, 1)
+    next.splice(to, 0, moved)
+    persist(next)
+  }
+
+  if (loading) return <p style={{ color: 'var(--mb-ink-muted)', fontSize: 12.5 }}>Loading…</p>
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* Toolbar */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', flex: 1, minWidth: 0 }}>
+          {dashboards.map((d) => (
+            <button key={d.id} onClick={() => selectDashboard(d)} className="ws-btn" style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: 'inherit', fontSize: 12.5, fontWeight: 600,
+              padding: '7px 12px', borderRadius: 8, cursor: 'pointer', whiteSpace: 'nowrap',
+              background: d.id === currentId ? 'var(--mb-brand-soft)' : 'var(--mb-surface)',
+              border: `1px solid ${d.id === currentId ? 'transparent' : 'var(--mb-border)'}`,
+              color: d.id === currentId ? 'var(--mb-brand-ink)' : 'var(--mb-ink-2)',
+            }}>
+              {d.active && <Icon name="star" size={12} color="var(--c-fieldflow)" />}
+              {d.name}
+            </button>
+          ))}
+          <Btn kind="quiet" icon="plus" onClick={createDashboard}>New</Btn>
+        </div>
+
+        <div style={{ display: 'flex', gap: 6 }}>
+          {current && !current.active && <Btn kind="ghost" icon="star" onClick={setActive}>Set default</Btn>}
+          {editing && (
+            <>
+              <Btn kind="quiet" onClick={renameDashboard}>Rename</Btn>
+              <Btn kind="quiet" onClick={deleteDashboard}>Delete</Btn>
+              <Btn kind="soft" icon="plus" onClick={openAdd}>Add widget</Btn>
+            </>
+          )}
+          <Btn kind={editing ? 'primary' : 'ghost'} icon={editing ? undefined : 'settings'} onClick={() => setEditing((v) => !v)}>
+            {editing ? 'Done' : 'Edit'}
+          </Btn>
+        </div>
+      </div>
+
+      {/* Grid */}
+      {widgets.length === 0 ? (
+        <Panel>
+          <div style={{ display: 'grid', placeItems: 'center', gap: 10, padding: '40px 16px', textAlign: 'center' }}>
+            <Icon name="chart" size={26} color="var(--mb-ink-muted)" />
+            <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--mb-ink)' }}>No widgets yet</div>
+            <p style={{ fontSize: 12.5, color: 'var(--mb-ink-muted)', maxWidth: 360, lineHeight: 1.5 }}>
+              Build a custom view of your field operations — KPI tiles, trend charts, composition, raw tables, and live formula values.
+            </p>
+            <Btn kind="primary" icon="plus" onClick={() => { setEditing(true); openAdd() }}>Add your first widget</Btn>
+          </div>
+        </Panel>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 'var(--ws-gap, 14px)' }}>
+          {widgets.map((w, i) => (
+            <div
+              key={w.id}
+              draggable={editing}
+              onDragStart={() => { dragFrom.current = i }}
+              onDragOver={(e) => { if (editing) { e.preventDefault(); setDragOver(i) } }}
+              onDrop={() => onDrop(i)}
+              onDragEnd={() => { dragFrom.current = null; setDragOver(null) }}
+              style={{
+                gridColumn: `span ${Math.min(w.w, 4)}`,
+                minWidth: 0,
+                outline: editing && dragOver === i ? '2px dashed var(--c-fieldflow)' : 'none',
+                outlineOffset: 2,
+                cursor: editing ? 'grab' : 'default',
+              }}
+            >
+              <Panel
+                title={w.title}
+                sub={editing ? `${w.type} · span ${w.w}` : undefined}
+                pad={w.type === 'kpi' || w.type === 'formula' ? 0 : 12}
+                right={editing ? (
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    <button onClick={() => openEdit(w)} title="Edit" className="ws-btn" style={iconBtn}><Icon name="settings" size={13} /></button>
+                    <button onClick={() => removeWidget(w.id)} title="Remove" className="ws-btn" style={{ ...iconBtn, color: 'var(--mb-danger, #c0564e)' }}>✕</button>
+                  </div>
+                ) : undefined}
+                style={w.type === 'kpi' || w.type === 'formula' ? { background: 'transparent', border: 'none', boxShadow: 'none' } : undefined}
+              >
+                {w.type === 'kpi' || w.type === 'formula'
+                  ? <WidgetBody widget={w} />
+                  : <div style={{ height: widgetNeedsChartHeight(w.type) ? 240 : 'auto' }}><WidgetBody widget={w} /></div>}
+              </Panel>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {formOpen && (
+        <Overlay onClose={() => { setFormOpen(false); setEditWidget(null) }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--mb-ink)', marginBottom: 14 }}>{editWidget ? 'Edit widget' : 'Add widget'}</div>
+          <WidgetForm initial={editWidget ?? undefined} onSave={saveWidget} onCancel={() => { setFormOpen(false); setEditWidget(null) }} />
+        </Overlay>
+      )}
+    </div>
+  )
+}
+
+const iconBtn: React.CSSProperties = {
+  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 26, height: 26,
+  borderRadius: 6, border: '1px solid var(--mb-border)', background: 'var(--mb-surface)',
+  color: 'var(--mb-ink-2)', cursor: 'pointer', fontSize: 12, lineHeight: 1,
+}
+
+function Overlay({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(0,0,0,0.45)', display: 'grid', placeItems: 'center', padding: 16 }}>
+      <div onClick={(e) => e.stopPropagation()} className="ws-card" style={{ width: 'min(460px, 100%)', maxHeight: '90vh', overflow: 'auto', padding: 20 }}>
+        {children}
+      </div>
+    </div>
+  )
+}

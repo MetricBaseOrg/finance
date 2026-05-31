@@ -5,6 +5,7 @@ import { AppHeader } from '@/app/home/ui'
 
 const TABS = [
   { id: 'overview', label: 'Overview', href: '/field' },
+  { id: 'dashboard', label: 'Dashboard', href: '/field/dashboard' },
   { id: 'analytics', label: 'Analytics', href: '/field/analytics' },
   { id: 'nodes', label: 'Nodes', href: '/field/nodes' },
   { id: 'flow-log', label: 'Flow Log', href: '/field/flow-log' },
