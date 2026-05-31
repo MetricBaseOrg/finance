@@ -10,6 +10,7 @@ const SCOPE_LABELS: Record<string, string> = {
   finance: "Finance",
   field: "Field",
   chat: "Chat",
+  search: "Search",
 };
 
 export function AgentRowActions({
@@ -69,11 +70,26 @@ export function AgentRowActions({
       )}
 
       {editing && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          onClick={() => setEditing(false)}
+        >
         <form
           ref={formRef}
           action={formAction}
-          className="mb-card p-4 flex flex-col gap-3 w-full md:w-[420px] mt-1"
+          onClick={(e) => e.stopPropagation()}
+          className="mb-card p-5 flex flex-col gap-3 w-full max-w-lg max-h-[90vh] overflow-auto text-left"
         >
+          <div className="flex items-center justify-between">
+            <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-gold">Edit agent</span>
+            <button
+              type="button"
+              onClick={() => setEditing(false)}
+              className="font-mono text-[10px] uppercase tracking-[0.2em] text-gray-3 hover:text-white"
+            >
+              Close
+            </button>
+          </div>
           <input type="hidden" name="agentId" value={agent.id} />
           <div className="grid grid-cols-[1.6fr_120px] gap-3">
             <label className="flex flex-col gap-1.5">
@@ -124,6 +140,7 @@ export function AgentRowActions({
             {pending ? "Saving…" : "Save"}
           </button>
         </form>
+        </div>
       )}
     </div>
   );
