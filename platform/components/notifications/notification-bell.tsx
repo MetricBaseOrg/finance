@@ -252,9 +252,13 @@ export function NotificationBell({ className }: { className?: string }) {
             )}
             {notifications.map(n => {
               const Icon = KIND_ICON[n.kind] || Bell
-              const meta: { preview?: string; taskTitle?: string; title?: string } = (() => {
+              const meta: { preview?: string; taskTitle?: string; title?: string; body?: string } = (() => {
                 try { return n.metadata ? JSON.parse(n.metadata) : {} } catch { return {} }
               })()
+              // General (finance/field) notifications are self-describing via their
+              // title; fall back to it (and a module icon) when there's no actor.
+              const isGeneral = !!n.module && n.module !== 'projects'
+              const headline = n.actor?.name || n.actor?.email || (isGeneral ? meta.title || 'Notification' : 'Someone')
               return (
                 <button
                   key={n.id}
@@ -268,9 +272,13 @@ export function NotificationBell({ className }: { className?: string }) {
                   <div className="flex-shrink-0 mt-0.5">
                     {n.actor?.image ? (
                       <img src={n.actor.image} className="h-8 w-8 rounded-full" alt="" />
-                    ) : (
+                    ) : n.actor ? (
                       <div className="h-8 w-8 rounded-full bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 text-[10px] font-bold flex items-center justify-center">
-                        {getInitials(n.actor?.name || n.actor?.email || '?')}
+                        {getInitials(n.actor.name || n.actor.email || '?')}
+                      </div>
+                    ) : (
+                      <div className="h-8 w-8 rounded-full bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 flex items-center justify-center">
+                        <Icon className="h-4 w-4" />
                       </div>
                     )}
                   </div>
@@ -278,7 +286,7 @@ export function NotificationBell({ className }: { className?: string }) {
                     <div className="flex items-center gap-1.5">
                       <Icon className="h-3 w-3 text-gray-3 flex-shrink-0" />
                       <span className="text-xs font-semibold text-gray-1 truncate">
-                        {n.actor?.name || n.actor?.email || 'Someone'}
+                        {headline}
                       </span>
                       {!n.read && <span className="h-1.5 w-1.5 rounded-full bg-indigo-500 flex-shrink-0" />}
                     </div>
