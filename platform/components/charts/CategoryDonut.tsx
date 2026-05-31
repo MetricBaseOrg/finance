@@ -46,6 +46,8 @@ export function CategoryDonut({
             fontSize: 11,
             color: "var(--white)",
           }}
+          labelStyle={{ color: "var(--white)" }}
+          itemStyle={{ color: "var(--light)" }}
           formatter={(v) =>
             new Intl.NumberFormat("en-US", {
               style: "currency",

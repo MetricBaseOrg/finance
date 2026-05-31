@@ -52,6 +52,9 @@ export function CashflowBar({
             fontSize: 11,
             color: "var(--white)",
           }}
+          labelStyle={{ color: "var(--white)" }}
+          itemStyle={{ color: "var(--light)" }}
+          cursor={{ fill: "var(--line)" }}
           formatter={(v) =>
             new Intl.NumberFormat("en-US", {
               style: "currency",
