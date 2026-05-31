@@ -17,6 +17,5 @@ export default defineConfig({
   },
   datasource: {
     url: migrationUrl,
-    shadowDatabaseUrl: process.env.SHADOW_DATABASE_URL,
   },
 })
