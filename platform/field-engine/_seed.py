@@ -58,7 +58,7 @@ def seed_org(conn, org):
         "buyer": (nid(), "SD-BUYER-X", "Buyer / Offtaker", "buyer", None, 0),
     }
     node_rows = [
-        (n[0], org, n[1], n[2], n[3], n[4], "bbl", None, True, None, n[5], None)
+        (n[0], org, n[1], n[2], n[3], n[4], "bbl", None, True, None, n[5])
         for n in nodes.values()
     ]
     conn.cursor().executemany(

@@ -36,7 +36,8 @@ async function call(
       ...(opts.body ? { body: JSON.stringify(opts.body) } : {}),
       // Fail fast when the engine is unreachable so the UI can show the
       // offline state quickly; real compute calls still get a few seconds.
-      signal: AbortSignal.timeout(6_000),
+      // Overridable for local dev, where latency to a remote Neon is high.
+      signal: AbortSignal.timeout(Number(process.env.FIELD_ENGINE_TIMEOUT_MS) || 6_000),
       cache: 'no-store',
     })
     const data = await res.json().catch(() => null)

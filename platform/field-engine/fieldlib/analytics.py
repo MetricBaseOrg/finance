@@ -347,7 +347,7 @@ def get_stock_balance(company_id, node_id=None, date_from=None, date_to=None):
         if node_id:
             params.append(node_id)
 
-        nodes = conn.execute(
+        nodes = [dict(r) for r in conn.execute(
             f"""SELECT n.id, n.code, n.name, n.node_type,
                        COALESCE(n.opening_stock, 0) as opening_stock
                 FROM nodes n
@@ -355,12 +355,15 @@ def get_stock_balance(company_id, node_id=None, date_from=None, date_to=None):
                   AND n.active=1
                   AND n.node_type != 'buyer'
                 ORDER BY n.node_type, n.code""",
-            params).fetchall()
+            params).fetchall()]
+        ids = [n['id'] for n in nodes]
+        if not ids:
+            return None if node_id else []
 
-        # Reusable date predicates
-        def with_dates(base_params, col):
+        # Reusable date predicate (set-based: filter + params).
+        def dfilter(col):
             sql = ""
-            p = list(base_params)
+            p = []
             if date_from:
                 sql += f" AND {col} >= ?"
                 p.append(date_from)
@@ -369,54 +372,47 @@ def get_stock_balance(company_id, node_id=None, date_from=None, date_to=None):
                 p.append(date_to)
             return sql, p
 
+        # Aggregate the whole node set in a handful of grouped queries rather
+        # than a per-node loop (avoids N+1 round-trips to a remote Postgres).
+        ds, dp = dfilter("date")
+        in_xfer = {r['nid']: r for r in conn.execute(
+            f"""SELECT to_node_id as nid, COALESCE(SUM(volume),0) as src,
+                       COALESCE(SUM(COALESCE(receipt_volume, volume)),0) as dst
+                FROM transfers WHERE company_id=? AND to_node_id = ANY(?){ds}
+                GROUP BY to_node_id""", [company_id, ids] + dp).fetchall()}
+        out_xfer = {r['nid']: r['t'] for r in conn.execute(
+            f"""SELECT from_node_id as nid, COALESCE(SUM(volume),0) as t
+                FROM transfers WHERE company_id=? AND from_node_id = ANY(?){ds}
+                GROUP BY from_node_id""", [company_id, ids] + dp).fetchall()}
+
+        ls, lp = dfilter("start_load")
+        in_lift = {r['nid']: r for r in conn.execute(
+            f"""SELECT buyer_node_id as nid, COALESCE(SUM(bl_volume),0) as src,
+                       COALESCE(SUM(COALESCE(cqd_volume, bl_volume)),0) as dst
+                FROM liftings WHERE company_id=? AND buyer_node_id = ANY(?)
+                  AND status='completed'{ls}
+                GROUP BY buyer_node_id""", [company_id, ids] + lp).fetchall()}
+        out_lift = {r['nid']: r['t'] for r in conn.execute(
+            f"""SELECT from_node_id as nid, COALESCE(SUM(bl_volume),0) as t
+                FROM liftings WHERE company_id=? AND from_node_id = ANY(?)
+                  AND status='completed'{ls}
+                GROUP BY from_node_id""", [company_id, ids] + lp).fetchall()}
+
+        # Latest stock reading per node in one pass.
+        measured_map = {r['nid']: r for r in conn.execute(
+            """SELECT DISTINCT ON (node_id) node_id as nid, volume, date
+               FROM flows WHERE company_id=? AND flow_type='stock' AND node_id = ANY(?)
+               ORDER BY node_id, date DESC""", [company_id, ids]).fetchall()}
+
         results = []
         for n in nodes:
             nid = n['id']
+            ix, il = in_xfer.get(nid), in_lift.get(nid)
+            dispatched_toward = (ix['src'] if ix else 0) + (il['src'] if il else 0)
+            receipts          = (ix['dst'] if ix else 0) + (il['dst'] if il else 0)
+            dispatches        = out_xfer.get(nid, 0) + out_lift.get(nid, 0)
 
-            # ── Inbound (transfers + liftings where N is the destination) ────
-            # `dispatched_toward` = source-measured volume sent toward N by upstream
-            # `received_at`     = destination-measured volume actually arriving at N
-            # Per-edge L/G aggregates to: received_at − dispatched_toward
-            sql, p = with_dates([company_id, nid], "date")
-            in_xfer = conn.execute(
-                f"SELECT COALESCE(SUM(t.volume),0) as src, "
-                f"       COALESCE(SUM(COALESCE(t.receipt_volume, t.volume)),0) as dst "
-                f"FROM transfers t WHERE t.company_id=? AND t.to_node_id=?{sql}",
-                p).fetchone()
-
-            sql, p = with_dates([company_id, nid], "start_load")
-            in_lift = conn.execute(
-                f"SELECT COALESCE(SUM(l.bl_volume),0) as src, "
-                f"       COALESCE(SUM(COALESCE(l.cqd_volume, l.bl_volume)),0) as dst "
-                f"FROM liftings l WHERE l.company_id=? AND l.buyer_node_id=? AND l.status='completed'{sql}",
-                p).fetchone()
-
-            dispatched_toward = in_xfer['src'] + in_lift['src']
-            receipts          = in_xfer['dst'] + in_lift['dst']
-
-            # ── Outbound (transfers + liftings where N is the source) ────────
-            # Still useful for the calculated-stock display, but no longer the
-            # basis of L/G — L/G belongs to inbound edges.
-            sql, p = with_dates([company_id, nid], "date")
-            out_xfer = conn.execute(
-                f"SELECT COALESCE(SUM(volume),0) as t FROM transfers "
-                f"WHERE company_id=? AND from_node_id=?{sql}",
-                p).fetchone()
-
-            sql, p = with_dates([company_id, nid], "start_load")
-            out_lift = conn.execute(
-                f"SELECT COALESCE(SUM(bl_volume),0) as t FROM liftings "
-                f"WHERE company_id=? AND from_node_id=? AND status='completed'{sql}",
-                p).fetchone()
-
-            dispatches = out_xfer['t'] + out_lift['t']
-
-            measured_row = conn.execute(
-                """SELECT volume, date FROM flows
-                   WHERE company_id=? AND node_id=? AND flow_type='stock'
-                   ORDER BY date DESC LIMIT 1""",
-                (company_id, nid)).fetchone()
-
+            measured_row = measured_map.get(nid)
             opening = n['opening_stock']
             calculated = opening + receipts - dispatches
             measured = measured_row['volume'] if measured_row else None

@@ -17,6 +17,7 @@ tables/columns identical to FieldFlow's, so the ported SQL matches.
 """
 import os
 import re
+import threading
 from contextlib import contextmanager
 
 import psycopg
@@ -55,32 +56,52 @@ def _translate(sql: str) -> str:
     return sql
 
 
-class _ConnShim:
-    def __init__(self, conn):
-        self._conn = conn
+# Reuse one Postgres connection per worker thread. Opening a fresh connection
+# per request means a full TLS handshake to Neon every time (~seconds from a
+# distant client); keeping a warm per-thread connection removes that cost. The
+# engine is read-only, so the connection runs in autocommit mode. waitress
+# serves requests on a thread pool and psycopg connections are not safe to share
+# across threads, hence thread-local rather than a single global.
+_local = threading.local()
 
+
+def _get_conn():
+    conn = getattr(_local, "conn", None)
+    if conn is None or conn.closed:
+        conn = psycopg.connect(_DSN, row_factory=dict_row, autocommit=True)
+        _local.conn = conn
+    return conn
+
+
+class _ConnShim:
     def execute(self, sql, params=()):
-        # psycopg's Connection.execute returns a Cursor (rows are dicts here).
-        return self._conn.execute(_translate(sql), tuple(params) if params else None)
+        tsql = _translate(sql)
+        p = tuple(params) if params else None
+        try:
+            return _get_conn().execute(tsql, p)
+        except (psycopg.OperationalError, psycopg.InterfaceError):
+            # Stale/dropped connection (e.g. Neon idle timeout) — reset and retry once.
+            try:
+                if getattr(_local, "conn", None):
+                    _local.conn.close()
+            except Exception:
+                pass
+            _local.conn = None
+            return _get_conn().execute(tsql, p)
 
     def commit(self):
-        self._conn.commit()
+        pass  # autocommit
 
     def rollback(self):
-        self._conn.rollback()
+        try:
+            _get_conn().rollback()
+        except Exception:
+            pass
 
 
 @contextmanager
 def get_db():
-    conn = psycopg.connect(_DSN, row_factory=dict_row)
-    try:
-        yield _ConnShim(conn)
-        conn.commit()
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        conn.close()
+    yield _ConnShim()
 
 
 def init_db():
