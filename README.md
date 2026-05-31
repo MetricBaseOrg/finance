@@ -8,7 +8,8 @@ The static editorial site and Blogger templates live in [`../MetricBase/`](../Me
 
 | Directory | Description | Production |
 | --- | --- | --- |
-| [`financial-tracker`](./financial-tracker/) | Multi-tenant financial tracker for individuals + companies. Multi-currency (IDR/USD), P&L + balance sheet, investments + dividends, recurring transactions, workspace invites, audit log, CSV/PDF export. Next.js 16 · Prisma 7 + Neon · Auth.js v5. | [`apps.metricbase.org`](https://apps.metricbase.org) |
+| [`platform`](./platform/) | **Unified workspace** — Projects (ProBase), Finance, Field ops (FieldFlow), Team chat, and AI agents, scoped to a shared Organization. Multi-currency finance with a transaction approval workflow, project↔finance linking, field import/export/reports, and configurable AI agent members. Next.js 16 · Prisma 7 + Neon · Auth.js v5. See [`platform/README.md`](./platform/README.md). | [`apps.metricbase.org`](https://apps.metricbase.org) |
+| [`financial-tracker`](./financial-tracker/) | Original standalone finance tracker — multi-currency (IDR/USD), P&L + balance sheet, investments + dividends, recurring, invites, audit, CSV/PDF export. **Superseded by the Finance module in `platform`.** | — |
 
 ## Conventions
 
