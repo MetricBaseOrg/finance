@@ -174,7 +174,7 @@ export const AppHeader = ({ app, title, breadcrumb, tabs, active, right, hideTit
   // Nothing to show: title suppressed and no tabs → render no header bar.
   if (hideTitle && (!tabs || tabs.length === 0)) return null
   return (
-  <div style={{ borderBottom: '1px solid var(--mb-border)', background: 'var(--mb-surface)' }}>
+  <div style={{ borderBottom: '1px solid var(--mb-border)', background: 'var(--mb-surface)', position: 'sticky', top: 0, zIndex: 20 }}>
     <div style={{ maxWidth: 'var(--ws-maxw)', margin: '0 auto', padding: '0 var(--ws-gutter)' }}>
       {!hideTitle && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 13, padding: '14px 0 12px' }}>
