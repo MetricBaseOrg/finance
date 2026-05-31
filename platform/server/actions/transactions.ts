@@ -301,7 +301,13 @@ export async function importTransactions(
   _prev: ImportResult | undefined,
   formData: FormData,
 ): Promise<ImportResult> {
-  const { workspace } = await requireMembership(slug);
+  const { user, workspace, membership } = await requireMembership(slug);
+  if (membership.role === "VIEWER") return { imported: 0, errors: ["Your role does not permit importing."] };
+  // Imported rows follow the same approval rule as manual entry.
+  const status = membership.role === "MEMBER" ? "PENDING" : "POSTED";
+  // Account creation is OWNER/ADMIN-only — members may only import against
+  // existing accounts (unknown account names error their row).
+  const canManageAccounts = membership.role === "OWNER" || membership.role === "ADMIN";
   const file = formData.get("csv") as File | null;
   if (!file || file.size === 0) return { imported: 0, errors: ["No file provided."] };
 
@@ -341,6 +347,10 @@ export async function importTransactions(
 
     let primary = acctByName.get(account.toLowerCase());
     if (!primary) {
+      if (!canManageAccounts) {
+        errors.push("Row " + rowNum + ": account \"" + account + "\" not found (only owners/admins can create accounts).");
+        continue;
+      }
       primary = await db.finAccount.create({
         data: {
           organizationId: workspace.id,
@@ -364,6 +374,10 @@ export async function importTransactions(
       if (!counter_account) { errors.push("Row " + rowNum + ": TRANSFER requires counter_account."); continue; }
       let counter = acctByName.get(counter_account.toLowerCase());
       if (!counter) {
+        if (!canManageAccounts) {
+          errors.push("Row " + rowNum + ": account \"" + counter_account + "\" not found (only owners/admins can create accounts).");
+          continue;
+        }
         counter = await db.finAccount.create({
           data: {
             organizationId: workspace.id,
@@ -418,6 +432,9 @@ export async function importTransactions(
         baseAmount: amountD.times(fxRate).toString(),
         type: txnType as "INCOME" | "EXPENSE" | "TRANSFER",
         memo: memo || null,
+        status,
+        createdById: user.id,
+        ...(status === "POSTED" && { approvedById: user.id, approvedAt: new Date() }),
       },
     });
     imported++;
@@ -426,6 +443,15 @@ export async function importTransactions(
   if (imported > 0) {
     revalidatePath("/finance/transactions");
     revalidatePath("/finance/dashboard");
+    if (status === "PENDING") {
+      notifyApprovers({
+        organizationId: workspace.id,
+        slug,
+        actorId: user.id,
+        actorName: user.name || user.email || "A member",
+        detail: `${imported} imported transaction${imported === 1 ? "" : "s"}`,
+      }).catch(console.error);
+    }
   }
 
   return { imported, errors };
