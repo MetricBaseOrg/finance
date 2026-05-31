@@ -186,7 +186,7 @@ export function DashboardBuilder({ canManage }: { canManage: boolean }) {
           </div>
         </Panel>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 'var(--ws-gap, 14px)' }}>
+        <div className="field-dash-grid">
           {widgets.map((w, i) => (
             <div
               key={w.id}

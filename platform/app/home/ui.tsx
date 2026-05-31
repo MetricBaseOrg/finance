@@ -181,7 +181,7 @@ export const AppHeader = ({ app, title, breadcrumb, tabs, active, right }: {
         {right}
       </div>
       {tabs && (
-        <div style={{ display: 'flex', gap: 2, marginBottom: -1, overflowX: 'auto' }}>
+        <div className="ws-tabs" style={{ display: 'flex', gap: 2, marginBottom: -1, overflowX: 'auto' }}>
           {tabs.map((t) => (
             <a key={t.id} href={t.href}
               style={{ textDecoration: 'none', padding: '9px 13px', fontSize: 12.5, fontWeight: active === t.id ? 700 : 500, color: active === t.id ? 'var(--mb-brand-ink)' : 'var(--mb-ink-muted)', borderBottom: active === t.id ? '2px solid var(--mb-brand)' : '2px solid transparent', whiteSpace: 'nowrap' }}>

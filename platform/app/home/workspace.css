@@ -235,6 +235,23 @@ html:has([data-app="workspace"])  { --grid-line: rgba(255, 255, 255, 0.01); }
 /* Wide tables scroll inside their card instead of pushing the page width. */
 .ws-card:has(table) { overflow-x: auto; }
 
+/* FieldFlow dashboard builder grid: 4 cols on desktop, collapsing to 2 then 1.
+   Widgets use `grid-column: span N`; auto-placement clamps the span to the
+   available column count, so wide widgets become full-width on small screens. */
+.field-dash-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--ws-gap);
+}
+@media (max-width: 900px) { .field-dash-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 560px) { .field-dash-grid { grid-template-columns: 1fr; } }
+
+/* App header tab strip: smooth horizontal scroll with a slim scrollbar when the
+   tabs (e.g. FieldFlow's 11) overflow on narrow screens. */
+.ws-tabs { -webkit-overflow-scrolling: touch; scrollbar-width: thin; }
+.ws-tabs::-webkit-scrollbar { height: 4px; }
+.ws-tabs::-webkit-scrollbar-thumb { background: var(--mb-border); border-radius: 4px; }
+
 /* Prevent wide content (tables, grids, etc.) from causing horizontal scroll
    on the main workspace shell. Applied only to content containers. */
 .mb-root .ws-page,
