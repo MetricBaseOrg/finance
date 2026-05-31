@@ -45,16 +45,17 @@ export function CashflowBar({
         />
         <Tooltip
           contentStyle={{
-            background: "var(--topbar-bg)",
-            border: "1px solid var(--line-strong)",
+            background: "#16181d",
+            border: "1px solid rgba(201,168,76,0.35)",
             borderRadius: 0,
             fontFamily: "var(--font-mono)",
             fontSize: 11,
-            color: "var(--white)",
+            color: "#e5e5e5",
+            boxShadow: "0 6px 24px rgba(0,0,0,0.45)",
           }}
-          labelStyle={{ color: "var(--white)" }}
-          itemStyle={{ color: "var(--light)" }}
-          cursor={{ fill: "var(--line)" }}
+          labelStyle={{ color: "#ffffff", fontWeight: 700 }}
+          itemStyle={{ color: "#e5e5e5" }}
+          cursor={{ fill: "rgba(255,255,255,0.06)" }}
           formatter={(v) =>
             new Intl.NumberFormat("en-US", {
               style: "currency",
