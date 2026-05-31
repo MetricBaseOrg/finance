@@ -18,5 +18,6 @@ export function ProjectsChrome() {
         : pathname.startsWith('/projects/members') ? 'members'
           : 'projects'
 
-  return <AppHeader app="probase" breadcrumb="Project delivery" title="ProBase" tabs={TABS} active={active} />
+  // Title row hidden — the top bar already shows the active app; just the tabs.
+  return <AppHeader app="probase" breadcrumb="Project delivery" title="ProBase" tabs={TABS} active={active} hideTitle />
 }

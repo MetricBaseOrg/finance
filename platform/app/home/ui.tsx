@@ -166,22 +166,25 @@ export const Btn = ({ kind = 'ghost', icon, children, onClick, href, style }: {
 
 // ─── In-app chrome (secondary header, panels, KPI tiles, form atoms) ──────────
 
-export const AppHeader = ({ app, title, breadcrumb, tabs, active, right }: {
+export const AppHeader = ({ app, title, breadcrumb, tabs, active, right, hideTitle }: {
   app: AppId; title: string; breadcrumb?: string
   tabs?: { id: string; label: string; href: string }[]; active?: string; right?: React.ReactNode
+  hideTitle?: boolean
 }) => (
   <div style={{ borderBottom: '1px solid var(--mb-border)', background: 'var(--mb-surface)' }}>
     <div style={{ maxWidth: 'var(--ws-maxw)', margin: '0 auto', padding: '0 var(--ws-gutter)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 13, padding: '14px 0 12px' }}>
-        <AppTile app={app} size={34} radius={9} />
-        <div style={{ flex: 1, minWidth: 0 }}>
-          {breadcrumb && <div style={{ fontSize: 10.5, color: 'var(--mb-ink-soft)', fontFamily: 'var(--mb-font-mono)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>{breadcrumb}</div>}
-          <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--mb-ink)' }}>{title}</div>
+      {!hideTitle && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 13, padding: '14px 0 12px' }}>
+          <AppTile app={app} size={34} radius={9} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            {breadcrumb && <div style={{ fontSize: 10.5, color: 'var(--mb-ink-soft)', fontFamily: 'var(--mb-font-mono)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>{breadcrumb}</div>}
+            <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--mb-ink)' }}>{title}</div>
+          </div>
+          {right}
         </div>
-        {right}
-      </div>
+      )}
       {tabs && (
-        <div className="ws-tabs" style={{ display: 'flex', gap: 2, marginBottom: -1, overflowX: 'auto' }}>
+        <div className="ws-tabs" style={{ display: 'flex', gap: 2, marginBottom: -1, paddingTop: hideTitle ? 10 : 0, overflowX: 'auto' }}>
           {tabs.map((t) => (
             <a key={t.id} href={t.href}
               style={{ textDecoration: 'none', padding: '9px 13px', fontSize: 12.5, fontWeight: active === t.id ? 700 : 500, color: active === t.id ? 'var(--mb-brand-ink)' : 'var(--mb-ink-muted)', borderBottom: active === t.id ? '2px solid var(--mb-brand)' : '2px solid transparent', whiteSpace: 'nowrap' }}>
