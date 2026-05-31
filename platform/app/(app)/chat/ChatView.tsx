@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { Hash, Plus, Send, Bot, UserPlus, Loader2, Menu, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import toast from 'react-hot-toast'
+import Markdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 type Channel = { id: string; name: string; slug: string; kind: string; isPrivate: boolean; memberCount: number }
 type ChatUser = { id: string; name: string | null; email: string; image: string | null; kind: string }
@@ -268,9 +270,9 @@ function MessageRow({ message, mine }: { message: Message; mine: boolean }) {
     <div style={{ display: 'flex', gap: 10, flexDirection: mine ? 'row-reverse' : 'row' }}>
       {message.user.image ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={message.user.image} alt="" style={{ width: 30, height: 30, flexShrink: 0, borderRadius: isAgent ? 6 : '50%', objectFit: 'cover', border: '1px solid var(--mb-border)' }} />
+        <img src={message.user.image} alt="" style={{ width: 30, height: 30, flexShrink: 0, borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--mb-border)' }} />
       ) : (
-        <div style={{ width: 30, height: 30, flexShrink: 0, borderRadius: isAgent ? 6 : '50%', background: isAgent ? 'var(--mb-brand)' : 'var(--mb-surface-2, var(--mb-surface))', border: '1px solid var(--mb-border)', display: 'grid', placeItems: 'center', color: isAgent ? '#fff' : 'var(--mb-ink-soft)', fontSize: 12, fontWeight: 700 }}>
+        <div style={{ width: 30, height: 30, flexShrink: 0, borderRadius: '50%', background: isAgent ? 'var(--mb-brand)' : 'var(--mb-surface-2, var(--mb-surface))', border: '1px solid var(--mb-border)', display: 'grid', placeItems: 'center', color: isAgent ? '#fff' : 'var(--mb-ink-soft)', fontSize: 12, fontWeight: 700 }}>
           {isAgent ? <Bot className="h-4 w-4" /> : (name?.charAt(0).toUpperCase() ?? 'U')}
         </div>
       )}
@@ -280,8 +282,8 @@ function MessageRow({ message, mine }: { message: Message; mine: boolean }) {
           {isAgent && <span style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', background: 'var(--mb-brand)', color: '#fff', padding: '1px 5px', borderRadius: 4 }}>Agent</span>}
           <span style={{ fontSize: 11, color: 'var(--mb-ink-soft)' }}>{new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
         </div>
-        <div style={{ padding: '8px 12px', borderRadius: 10, background: mine ? 'var(--mb-brand)' : 'var(--mb-surface)', color: mine ? '#fff' : 'var(--mb-ink)', border: mine ? 'none' : '1px solid var(--mb-border)', fontSize: 14, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-          {message.content}
+        <div className="chat-md" style={{ padding: '8px 12px', borderRadius: 10, background: mine ? 'var(--mb-brand)' : 'var(--mb-surface)', color: mine ? '#fff' : 'var(--mb-ink)', border: mine ? 'none' : '1px solid var(--mb-border)', fontSize: 14, wordBreak: 'break-word' }}>
+          <Markdown remarkPlugins={[remarkGfm]}>{message.content}</Markdown>
         </div>
       </div>
     </div>
