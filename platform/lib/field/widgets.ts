@@ -24,6 +24,8 @@ export type Widget = {
   unit?: string
   /** column span on the 4-col grid. */
   w: 1 | 2 | 3 | 4
+  /** hide the widget's title bar in view mode (controls still show in edit mode). */
+  hideHeader?: boolean
 }
 
 export type DashboardLayout = { widgets: Widget[] }

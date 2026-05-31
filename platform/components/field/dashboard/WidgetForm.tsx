@@ -38,6 +38,7 @@ export function WidgetForm({ initial, onSave, onCancel }: {
   const [formula, setFormula] = useState(initial?.formula ?? '')
   const [unit, setUnit] = useState(initial?.unit ?? '')
   const [w, setW] = useState<Widget['w']>(initial?.w ?? (initial?.type === 'kpi' ? 1 : 2))
+  const [showHeader, setShowHeader] = useState(!initial?.hideHeader)
 
   const options = sourcesFor(type)
   const kpiKeys = useKpiKeys(source, type === 'kpi')
@@ -59,6 +60,7 @@ export function WidgetForm({ initial, onSave, onCancel }: {
       type, w,
       title: title.trim() || defaultTitle(),
     }
+    if (!showHeader) base.hideHeader = true
     if (type === 'formula') { base.formula = formula.trim(); base.unit = unit.trim() || undefined }
     else {
       base.source = source
@@ -146,6 +148,11 @@ export function WidgetForm({ initial, onSave, onCancel }: {
           <option value={3}>3 columns (¾)</option>
           <option value={4}>4 columns (full)</option>
         </select>
+      </label>
+
+      <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+        <input type="checkbox" checked={showHeader} onChange={(e) => setShowHeader(e.target.checked)} />
+        <WsLabel>Show title bar</WsLabel>
       </label>
 
       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 4 }}>

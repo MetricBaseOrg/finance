@@ -100,6 +100,7 @@ export function DashboardBuilder() {
     setFormOpen(false); setEditWidget(null)
   }
   function removeWidget(id: string) { persist(widgets.filter((w) => w.id !== id)) }
+  function toggleHeader(w: Widget) { persist(widgets.map((x) => (x.id === w.id ? { ...x, hideHeader: !x.hideHeader } : x))) }
   function openAdd() { setEditWidget(null); setFormOpen(true) }
   function openEdit(w: Widget) { setEditWidget(w); setFormOpen(true) }
 
@@ -181,11 +182,12 @@ export function DashboardBuilder() {
               }}
             >
               <Panel
-                title={w.title}
-                sub={editing ? `${w.type} · span ${w.w}` : undefined}
+                title={editing ? w.title : (w.hideHeader ? undefined : w.title)}
+                sub={editing ? `${w.type} · span ${w.w}${w.hideHeader ? ' · title hidden' : ''}` : undefined}
                 pad={w.type === 'kpi' || w.type === 'formula' ? 0 : 12}
                 right={editing ? (
                   <div style={{ display: 'flex', gap: 4 }}>
+                    <button onClick={() => toggleHeader(w)} title={w.hideHeader ? 'Show title bar' : 'Hide title bar'} className="ws-btn" style={iconBtn}><EyeIcon off={!!w.hideHeader} /></button>
                     <button onClick={() => openEdit(w)} title="Edit" className="ws-btn" style={iconBtn}><Icon name="settings" size={13} /></button>
                     <button onClick={() => removeWidget(w.id)} title="Remove" className="ws-btn" style={{ ...iconBtn, color: 'var(--mb-danger, #c0564e)' }}>✕</button>
                   </div>
@@ -208,6 +210,17 @@ export function DashboardBuilder() {
         </Overlay>
       )}
     </div>
+  )
+}
+
+// Eye / eye-off glyph (no matching key in the shared Icon set).
+function EyeIcon({ off }: { off: boolean }) {
+  return (
+    <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M1.5 12S5 5 12 5s10.5 7 10.5 7-3.5 7-10.5 7S1.5 12 1.5 12z" />
+      <circle cx="12" cy="12" r="3" />
+      {off && <line x1="3" y1="3" x2="21" y2="21" />}
+    </svg>
   )
 }
 
