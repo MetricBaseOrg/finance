@@ -35,6 +35,8 @@ export type Dashboard = {
   name: string
   active: boolean
   layoutJson: string
+  creatorName?: string | null
+  createdById?: string
 }
 
 export type SourceKind = 'kpiset' | 'series' | 'rows'

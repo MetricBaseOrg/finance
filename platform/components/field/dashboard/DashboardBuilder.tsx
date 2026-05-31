@@ -7,9 +7,9 @@ import { parseLayout, type Dashboard, type Widget } from '@/lib/field/widgets'
 import { WidgetBody, widgetNeedsChartHeight } from './DashboardWidget'
 import { WidgetForm } from './WidgetForm'
 
-type Raw = { id: string; name: string; active: boolean; layoutJson: string }
+type Raw = Dashboard
 
-export function DashboardBuilder() {
+export function DashboardBuilder({ canManage }: { canManage: boolean }) {
   const [dashboards, setDashboards] = useState<Dashboard[]>([])
   const [currentId, setCurrentId] = useState<string | null>(null)
   const [widgets, setWidgets] = useState<Widget[]>([])
@@ -31,16 +31,16 @@ export function DashboardBuilder() {
     const r = await fetch('/api/field/dashboards')
     if (!r.ok) { setLoading(false); return }
     let list: Raw[] = await r.json().catch(() => [])
-    // Bootstrap a first dashboard if the user has none.
-    if (list.length === 0) {
-      const c = await fetch('/api/field/dashboards', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: 'My Dashboard' }) })
+    // Bootstrap a first workspace dashboard — managers only (members are view-only).
+    if (list.length === 0 && canManage) {
+      const c = await fetch('/api/field/dashboards', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: 'Team Dashboard' }) })
       if (c.ok) { const created: Raw = await c.json(); await fetch(`/api/field/dashboards/${created.id}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ active: true }) }); list = [{ ...created, active: true }] }
     }
     setDashboards(list)
     const pick = list.find((d) => d.id === preferId) ?? list.find((d) => d.active) ?? list[0]
     if (pick) { setCurrentId(pick.id); setWidgets(parseLayout(pick.layoutJson).widgets) }
     setLoading(false)
-  }, [])
+  }, [canManage])
 
   useEffect(() => { load() }, [load])
 
@@ -122,45 +122,67 @@ export function DashboardBuilder() {
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', flex: 1, minWidth: 0 }}>
           {dashboards.map((d) => (
-            <button key={d.id} onClick={() => selectDashboard(d)} className="ws-btn" style={{
-              display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: 'inherit', fontSize: 12.5, fontWeight: 600,
-              padding: '7px 12px', borderRadius: 8, cursor: 'pointer', whiteSpace: 'nowrap',
-              background: d.id === currentId ? 'var(--mb-brand-soft)' : 'var(--mb-surface)',
-              border: `1px solid ${d.id === currentId ? 'transparent' : 'var(--mb-border)'}`,
-              color: d.id === currentId ? 'var(--mb-brand-ink)' : 'var(--mb-ink-2)',
-            }}>
+            <button key={d.id} onClick={() => selectDashboard(d)} className="ws-btn"
+              title={d.creatorName ? `Created by ${d.creatorName}` : undefined}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: 'inherit', fontSize: 12.5, fontWeight: 600,
+                padding: '7px 12px', borderRadius: 8, cursor: 'pointer', whiteSpace: 'nowrap',
+                background: d.id === currentId ? 'var(--mb-brand-soft)' : 'var(--mb-surface)',
+                border: `1px solid ${d.id === currentId ? 'transparent' : 'var(--mb-border)'}`,
+                color: d.id === currentId ? 'var(--mb-brand-ink)' : 'var(--mb-ink-2)',
+              }}>
               {d.active && <Icon name="star" size={12} color="var(--c-fieldflow)" />}
               {d.name}
             </button>
           ))}
-          <Btn kind="quiet" icon="plus" onClick={createDashboard}>New</Btn>
+          {canManage && <Btn kind="quiet" icon="plus" onClick={createDashboard}>New</Btn>}
         </div>
 
-        <div style={{ display: 'flex', gap: 6 }}>
-          {current && !current.active && <Btn kind="ghost" icon="star" onClick={setActive}>Set default</Btn>}
-          {editing && (
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          {!canManage && (
+            <span style={{ fontSize: 11, color: 'var(--mb-ink-muted)', fontFamily: 'var(--mb-font-mono)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>View only</span>
+          )}
+          {canManage && current && !current.active && <Btn kind="ghost" icon="star" onClick={setActive}>Set default</Btn>}
+          {canManage && editing && (
             <>
               <Btn kind="quiet" onClick={renameDashboard}>Rename</Btn>
               <Btn kind="quiet" onClick={deleteDashboard}>Delete</Btn>
               <Btn kind="soft" icon="plus" onClick={openAdd}>Add widget</Btn>
             </>
           )}
-          <Btn kind={editing ? 'primary' : 'ghost'} icon={editing ? undefined : 'settings'} onClick={() => setEditing((v) => !v)}>
-            {editing ? 'Done' : 'Edit'}
-          </Btn>
+          {canManage && (
+            <Btn kind={editing ? 'primary' : 'ghost'} icon={editing ? undefined : 'settings'} onClick={() => setEditing((v) => !v)}>
+              {editing ? 'Done' : 'Edit'}
+            </Btn>
+          )}
         </div>
       </div>
 
       {/* Grid */}
-      {widgets.length === 0 ? (
+      {dashboards.length === 0 ? (
+        <Panel>
+          <div style={{ display: 'grid', placeItems: 'center', gap: 10, padding: '40px 16px', textAlign: 'center' }}>
+            <Icon name="chart" size={26} color="var(--mb-ink-muted)" />
+            <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--mb-ink)' }}>No dashboards yet</div>
+            <p style={{ fontSize: 12.5, color: 'var(--mb-ink-muted)', maxWidth: 380, lineHeight: 1.5 }}>
+              {canManage
+                ? 'Create a shared workspace dashboard — everyone in the team will see it.'
+                : 'No dashboards have been set up for this workspace yet. Ask an owner or admin to create one.'}
+            </p>
+            {canManage && <Btn kind="primary" icon="plus" onClick={createDashboard}>Create dashboard</Btn>}
+          </div>
+        </Panel>
+      ) : widgets.length === 0 ? (
         <Panel>
           <div style={{ display: 'grid', placeItems: 'center', gap: 10, padding: '40px 16px', textAlign: 'center' }}>
             <Icon name="chart" size={26} color="var(--mb-ink-muted)" />
             <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--mb-ink)' }}>No widgets yet</div>
             <p style={{ fontSize: 12.5, color: 'var(--mb-ink-muted)', maxWidth: 360, lineHeight: 1.5 }}>
-              Build a custom view of your field operations — KPI tiles, trend charts, composition, raw tables, and live formula values.
+              {canManage
+                ? 'Build a custom view of your field operations — KPI tiles, trend charts, composition, raw tables, and live formula values.'
+                : 'This dashboard has no widgets yet.'}
             </p>
-            <Btn kind="primary" icon="plus" onClick={() => { setEditing(true); openAdd() }}>Add your first widget</Btn>
+            {canManage && <Btn kind="primary" icon="plus" onClick={() => { setEditing(true); openAdd() }}>Add your first widget</Btn>}
           </div>
         </Panel>
       ) : (
