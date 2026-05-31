@@ -9,8 +9,9 @@ import {
 import { GoldButton } from "@/components/mb/GoldButton";
 import { Eyebrow } from "@/components/mb/Eyebrow";
 
-type Account = { id: string; name: string; currency: string };
+type Account = { id: string; name: string; currency: string; type?: string; projectId?: string | null };
 type Category = { id: string; name: string; kind: "INCOME" | "EXPENSE" };
+type Project = { id: string; name: string };
 type TxnType = "INCOME" | "EXPENSE" | "TRANSFER";
 
 export function TransactionEditForm({
@@ -19,6 +20,7 @@ export function TransactionEditForm({
   initial,
   accounts,
   categories,
+  projects = [],
 }: {
   slug: string;
   id: string;
@@ -28,11 +30,13 @@ export function TransactionEditForm({
     finAccountId: string;
     counterAccountId: string | null;
     categoryId: string | null;
+    projectId: string | null;
     amount: string;
     memo: string | null;
   };
   accounts: Account[];
   categories: Category[];
+  projects?: Project[];
 }) {
   const router = useRouter();
   const action = updateTransaction.bind(null, slug, id);
@@ -52,7 +56,11 @@ export function TransactionEditForm({
   const filteredCategories = categories.filter((c) =>
     type === "INCOME" ? c.kind === "INCOME" : c.kind === "EXPENSE",
   );
-  const currency = accounts.find((a) => a.id === primaryAcct)?.currency ?? "";
+  const selectedAcct = accounts.find((a) => a.id === primaryAcct);
+  const currency = selectedAcct?.currency ?? "";
+  const boundProject = selectedAcct?.type === "PROJECT" && selectedAcct.projectId
+    ? projects.find((p) => p.id === selectedAcct.projectId)
+    : null;
 
   return (
     <form action={formAction} className="mb-card p-6 flex flex-col gap-5">
@@ -170,6 +178,26 @@ export function TransactionEditForm({
           </label>
         )}
       </div>
+
+      <label className="flex flex-col gap-1.5">
+        <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-gray-3">
+          Project (optional)
+        </span>
+        {boundProject ? (
+          <div className="mb-input flex items-center gap-2 opacity-80">
+            <span className="text-gold font-mono text-xs">●</span>
+            <span className="text-sm text-white">{boundProject.name}</span>
+            <span className="font-mono text-[10px] text-gray-3 ml-auto">from account</span>
+          </div>
+        ) : (
+          <select name="projectId" className="mb-input" defaultValue={initial.projectId ?? ""}>
+            <option value="">— None —</option>
+            {projects.map((p) => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
+        )}
+      </label>
 
       <label className="flex flex-col gap-1.5">
         <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-gray-3">

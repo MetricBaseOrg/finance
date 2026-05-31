@@ -17,9 +17,26 @@ const baseSchema = z.object({
   memo: z.string().max(200).optional().nullable(),
   categoryId: z.string().optional().nullable(),
   counterAccountId: z.string().optional().nullable(),
+  projectId: z.string().optional().nullable(),
 });
 
 export type TxnActionState = { error?: string };
+
+/** A PROJECT account binds its transactions to its project (account wins);
+ *  otherwise the per-transaction project tag applies (validated to the org). */
+async function resolveProjectId(
+  organizationId: string,
+  account: { type: string; projectId: string | null },
+  formProjectId: string | null,
+): Promise<string | null> {
+  if (account.type === "PROJECT" && account.projectId) return account.projectId;
+  if (!formProjectId) return null;
+  const proj = await db.project.findFirst({
+    where: { id: formProjectId, organizationId },
+    select: { id: true },
+  });
+  return proj?.id ?? null;
+}
 
 export async function createTransaction(
   slug: string,
@@ -39,6 +56,7 @@ export async function createTransaction(
     memo: formData.get("memo") || null,
     categoryId: formData.get("categoryId") || null,
     counterAccountId: formData.get("counterAccountId") || null,
+    projectId: formData.get("projectId") || null,
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
@@ -65,6 +83,8 @@ export async function createTransaction(
     if (!counter) return { error: "Destination account not found." };
   }
 
+  const projectId = await resolveProjectId(workspace.id, primary, input.projectId ?? null);
+
   let fxRate: Decimal;
   try {
     fxRate = await getFxRate(primary.currency, workspace.baseCurrency, input.date);
@@ -82,6 +102,7 @@ export async function createTransaction(
       finAccountId: primary.id,
       counterAccountId: counter?.id,
       categoryId: input.type === "TRANSFER" ? null : input.categoryId || null,
+      projectId,
       date: input.date,
       amount: amount.toString(),
       currency: primary.currency,
@@ -160,6 +181,7 @@ export async function updateTransaction(
     memo: formData.get("memo") || null,
     categoryId: formData.get("categoryId") || null,
     counterAccountId: formData.get("counterAccountId") || null,
+    projectId: formData.get("projectId") || null,
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
@@ -186,6 +208,8 @@ export async function updateTransaction(
     if (!counter) return { error: "Destination account not found." };
   }
 
+  const projectId = await resolveProjectId(workspace.id, primary, input.projectId ?? null);
+
   let fxRate: Decimal;
   try {
     fxRate = await getFxRate(primary.currency, workspace.baseCurrency, input.date);
@@ -204,6 +228,7 @@ export async function updateTransaction(
       finAccountId: primary.id,
       counterAccountId: input.type === "TRANSFER" ? counter?.id : null,
       categoryId: input.type === "TRANSFER" ? null : input.categoryId || null,
+      projectId,
       date: input.date,
       amount: amount.toString(),
       currency: primary.currency,

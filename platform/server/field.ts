@@ -51,3 +51,33 @@ export const FIELD_ENUMS = {
   LIFTING_STATUS,
   TARGET_CATEGORIES,
 }
+
+// Field audit logging — mirrors finance logAudit but writes module = "field".
+
+type LogFieldAuditInput = {
+  organizationId: string
+  userId?: string | null
+  action: string
+  entityType: string
+  entityId: string
+  summary: string
+  metadata?: unknown
+}
+
+export async function logFieldAudit(input: LogFieldAuditInput): Promise<void> {
+  try {
+    await prisma.auditLog.create({
+      data: {
+        organizationId: input.organizationId,
+        actorId: input.userId ?? null,
+        module: 'field',
+        action: input.action,
+        entity: input.entityType,
+        entityId: input.entityId,
+        metadata: input.summary,
+      },
+    })
+  } catch (e) {
+    console.error('[field-audit]', e)
+  }
+}

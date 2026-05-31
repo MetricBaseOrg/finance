@@ -8,10 +8,12 @@ export function TransactionFilters({
   slug: _slug,
   accounts,
   categories,
+  projects = [],
 }: {
   slug: string;
   accounts: { id: string; name: string }[];
   categories: { id: string; name: string; kind: "INCOME" | "EXPENSE" }[];
+  projects?: { id: string; name: string }[];
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -46,7 +48,7 @@ export function TransactionFilters({
           </button>
         )}
       </div>
-      <div className={`grid grid-cols-2 md:grid-cols-6 gap-2 ${pending ? "opacity-60" : ""}`}>
+      <div className={`grid grid-cols-2 md:grid-cols-7 gap-2 ${pending ? "opacity-60" : ""}`}>
         <input
           type="date"
           value={sp.get("from") ?? ""}
@@ -95,6 +97,19 @@ export function TransactionFilters({
           {categories.map((c) => (
             <option key={c.id} value={c.id}>
               [{c.kind[0]}] {c.name}
+            </option>
+          ))}
+        </select>
+        <select
+          value={sp.get("project") ?? ""}
+          onChange={(e) => update("project", e.target.value)}
+          className="mb-input"
+          aria-label="Project"
+        >
+          <option value="">All projects</option>
+          {projects.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
             </option>
           ))}
         </select>

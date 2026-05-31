@@ -13,3 +13,5 @@ certificates
 
 # Runtime logs
 *.log
+# Temp/scratch
+.tmp

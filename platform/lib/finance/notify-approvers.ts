@@ -38,9 +38,7 @@ export async function notifyApprovers(opts: {
       actorId: opts.actorId,
       module: 'finance',
       title: `${opts.actorName} submitted a transaction for approval`,
-      body: opts.detail,
-      taskId: opts.txType ?? null,
-      commentId: opts.memo ?? null,
+      body: opts.memo ? `${opts.detail} — ${opts.memo}` : opts.detail,
       href: url,
     })),
   })

@@ -85,8 +85,9 @@ export async function updateAgent(
   formData: FormData,
 ): Promise<AgentActionState> {
   const { user, workspace } = await requireRole(slug, ["OWNER", "ADMIN"]);
+  const agentId = String(formData.get("agentId") ?? "");
+  if (!agentId) return { error: "Agent ID is required." };
   const parsed = agentUpdateSchema.safeParse({
-    agentId: formData.get("agentId"),
     name: formData.get("name"),
     role: formData.get("role"),
     model: formData.get("model") ?? "",
@@ -100,7 +101,7 @@ export async function updateAgent(
   }
 
   const agent = await db.agent.findFirst({
-    where: { id: parsed.data.agentId, organizationId: workspace.id },
+    where: { id: agentId, organizationId: workspace.id },
   });
   if (!agent) return { error: "Agent not found." };
 

@@ -11,12 +11,20 @@ export default async function AccountsPage({
   params: Promise<{ workspace: string }>;
 }) {
   const { workspace: slug } = await params;
-  const { workspace } = await requireMembership(slug);
+  const { workspace, membership } = await requireMembership(slug);
+  const canManage = membership.role === "OWNER" || membership.role === "ADMIN";
 
-  const accounts = await db.finAccount.findMany({
-    where: { organizationId: workspace.id },
-    orderBy: [{ archivedAt: "asc" }, { createdAt: "asc" }],
-  });
+  const [accounts, projects] = await Promise.all([
+    db.finAccount.findMany({
+      where: { organizationId: workspace.id },
+      orderBy: [{ archivedAt: "asc" }, { createdAt: "asc" }],
+    }),
+    db.project.findMany({
+      where: { organizationId: workspace.id, status: { not: "ARCHIVED" } },
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
+    }),
+  ]);
 
   const active = accounts.filter((a) => !a.archivedAt);
   const archived = accounts.filter((a) => a.archivedAt);
@@ -36,7 +44,13 @@ export default async function AccountsPage({
         </div>
       </header>
 
-      <AccountCreateForm slug={slug} workspaceBase={workspace.baseCurrency} />
+      {canManage ? (
+        <AccountCreateForm slug={slug} workspaceBase={workspace.baseCurrency} projects={projects} />
+      ) : (
+        <div className="mb-card px-4 py-3 font-mono text-[11px] text-gray-3">
+          Only owners and admins can add or edit accounts. You can record transactions for approval.
+        </div>
+      )}
 
       {active.length === 0 ? (
         <BunEmpty
@@ -56,7 +70,7 @@ export default async function AccountsPage({
             ))}
           </div>
           {active.map((a) => (
-            <AccountRow key={a.id} account={{ ...a, openingBalance: a.openingBalance.toString() }} slug={slug} />
+            <AccountRow key={a.id} account={{ ...a, openingBalance: a.openingBalance.toString() }} slug={slug} projects={projects} canManage={canManage} />
           ))}
         </div>
       )}
@@ -66,7 +80,7 @@ export default async function AccountsPage({
           <Eyebrow>Archived</Eyebrow>
           <div className="mb-card opacity-60">
             {archived.map((a) => (
-              <AccountRow key={a.id} account={{ ...a, openingBalance: a.openingBalance.toString() }} slug={slug} />
+              <AccountRow key={a.id} account={{ ...a, openingBalance: a.openingBalance.toString() }} slug={slug} projects={projects} canManage={canManage} />
             ))}
           </div>
         </div>

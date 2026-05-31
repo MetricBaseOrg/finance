@@ -1,6 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Markdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import rehypeRaw from 'rehype-raw'
 import { format } from 'date-fns'
 import { X, Calendar, Flag, User, Tag, MessageSquare, Trash2, Edit2, Check, AlertCircle, ArrowUp, ArrowDown, Minus, Plus, ListChecks, History, AtSign, GitCommitVertical, Repeat, LayoutTemplate } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
@@ -8,6 +11,7 @@ import { AttachmentsSection } from './attachments-section'
 import { DependenciesSection } from './dependencies-section'
 import { AIBreakdownButton } from './ai-breakdown-button'
 import { AISummarizeComments } from './ai-summarize-comments'
+import { AskAgentButton } from './ask-agent-button'
 import { cn, STATUS_LABELS, PRIORITY_LABELS, STATUS_COLORS, PRIORITY_BG, getInitials } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -100,6 +104,23 @@ export function TaskDetail({ taskId, initialTask, userRole, currentUserId, onClo
     user: { id: string; name?: string | null; email?: string | null; image?: string | null }
   }>>([])
   const [activityOpen, setActivityOpen] = useState(false)
+
+  const refreshTask = () => {
+    if (!taskId) return
+    fetch(`/api/tasks/${taskId}`, { cache: 'no-store' })
+      .then(r => r.json())
+      .then(data => setTask(prev => {
+        if (!prev) return data
+        const merged: Record<string, unknown> = { ...data }
+        for (const f of CLIENT_AUTHORITATIVE_FIELDS) {
+          if (prev[f as keyof typeof prev] !== undefined) {
+            merged[f] = prev[f as keyof typeof prev]
+          }
+        }
+        return merged as unknown as Task
+      }))
+      .catch(() => {})
+  }
 
   // Track the taskId we last fetched for, so we re-fetch on switch but not on
   // every render. When initialTask is provided we still GET to load comments
@@ -753,9 +774,12 @@ export function TaskDetail({ taskId, initialTask, userRole, currentUserId, onClo
                   <label className="text-xs font-medium text-gray-3">
                     Comments ({task.comments?.length || 0})
                   </label>
-                  {(task.comments?.length || 0) >= 4 && (
-                    <AISummarizeComments taskId={task.id} />
-                  )}
+                  <div className="flex items-center gap-3">
+                    <AskAgentButton taskId={task.id} onRan={refreshTask} />
+                    {(task.comments?.length || 0) >= 4 && (
+                      <AISummarizeComments taskId={task.id} />
+                    )}
+                  </div>
                 </div>
                 <div className="space-y-4">
                   {task.comments?.map(c => (
@@ -771,9 +795,7 @@ export function TaskDetail({ taskId, initialTask, userRole, currentUserId, onClo
                           <span className="text-xs font-semibold text-gray-1">{c.user.name || c.user.email}</span>
                           <span className="text-xs text-gray-4">{format(new Date(c.createdAt), 'MMM d, h:mm a')}</span>
                         </div>
-                        <p className="text-sm text-gray-2 mt-0.5 whitespace-pre-wrap break-words">
-                          <CommentBody text={c.content} />
-                        </p>
+                        <CommentBody text={c.content} />
                       </div>
                     </div>
                   ))}
@@ -810,15 +832,14 @@ export function TaskDetail({ taskId, initialTask, userRole, currentUserId, onClo
 // ── @mention highlighter ─────────────────────────────────────────────────────
 const MENTION_TOKEN_RE = /(@[\w.+-]+)/g
 function CommentBody({ text }: { text: string }) {
-  const parts = text.split(MENTION_TOKEN_RE)
+  const highlighted = text.replace(
+    MENTION_TOKEN_RE,
+    (m) => `<span class="mention">${m}</span>`
+  )
   return (
-    <>
-      {parts.map((p, i) =>
-        MENTION_TOKEN_RE.test(p)
-          ? <span key={i} className="bg-indigo-50 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 rounded px-1 py-0.5 text-[0.95em] font-medium">{p}</span>
-          : <span key={i}>{p}</span>
-      )}
-    </>
+    <div className="comment-body text-sm text-gray-1 leading-relaxed [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_li]:ml-4 [&_code]:text-[var(--color-gold)] [&_code]:text-[11px] [&_code]:bg-[var(--color-bg-hover)] [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_pre]:my-2 [&_pre]:bg-[var(--color-bg-hover)] [&_pre]:p-3 [&_pre]:rounded-lg [&_pre]:overflow-x-auto [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_table]:my-2 [&_table]:border-collapse [&_th]:px-2 [&_th]:py-1 [&_th]:text-[10px] [&_th]:uppercase [&_th]:tracking-wider [&_th]:text-gray-3 [&_th]:border [&_th]:border-line [&_th]:bg-[var(--color-bg-hover)] [&_td]:px-2 [&_td]:py-0.5 [&_td]:text-xs [&_td]:text-gray-2 [&_td]:border [&_td]:border-line [&_a]:text-indigo-400 [&_a]:underline [&_strong]:font-bold [&_em]:italic [&_.mention]:bg-indigo-50 [&_.mention]:dark:bg-indigo-500/20 [&_.mention]:text-indigo-700 [&_.mention]:dark:text-indigo-300 [&_.mention]:rounded [&_.mention]:px-1 [&_.mention]:py-0.5 [&_.mention]:text-[0.95em] [&_.mention]:font-medium">
+      <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{highlighted}</Markdown>
+    </div>
   )
 }
 

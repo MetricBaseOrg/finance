@@ -13,7 +13,7 @@ export default async function TransactionEditPage({
   const { workspace: slug, id } = await params;
   const { workspace } = await requireMembership(slug);
 
-  const [txn, accounts, categories] = await Promise.all([
+  const [txn, accounts, categories, projects] = await Promise.all([
     db.transaction.findFirst({
       where: { id, organizationId: workspace.id },
     }),
@@ -24,6 +24,11 @@ export default async function TransactionEditPage({
     db.category.findMany({
       where: { organizationId: workspace.id },
       orderBy: [{ kind: "asc" }, { name: "asc" }],
+    }),
+    db.project.findMany({
+      where: { organizationId: workspace.id, status: { not: "ARCHIVED" } },
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
     }),
   ]);
 
@@ -56,6 +61,7 @@ export default async function TransactionEditPage({
           finAccountId: txn.finAccountId,
           counterAccountId: txn.counterAccountId,
           categoryId: txn.categoryId,
+          projectId: txn.projectId,
           amount: txn.amount.toString(),
           memo: txn.memo,
         }}
@@ -63,12 +69,15 @@ export default async function TransactionEditPage({
           id: a.id,
           name: a.name,
           currency: a.currency,
+          type: a.type,
+          projectId: a.projectId,
         }))}
         categories={categories.map((c) => ({
           id: c.id,
           name: c.name,
           kind: c.kind,
         }))}
+        projects={projects}
       />
     </div>
   );

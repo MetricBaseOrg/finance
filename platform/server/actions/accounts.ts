@@ -14,15 +14,30 @@ export async function createAccount(
   _prev: AccountActionState | undefined,
   formData: FormData,
 ): Promise<AccountActionState> {
-  const { user, workspace } = await requireMembership(slug);
+  const { user, workspace, membership } = await requireMembership(slug);
+  if (membership.role !== "OWNER" && membership.role !== "ADMIN") {
+    return { error: "Only owners and admins can manage accounts." };
+  }
   const parsed = finAccountSchema.safeParse({
     name: formData.get("name"),
     type: formData.get("type"),
     currency: formData.get("currency"),
     openingBalance: formData.get("openingBalance") ?? 0,
+    projectId: formData.get("projectId") || null,
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  }
+  // PROJECT accounts must name a project that belongs to this workspace.
+  let projectId: string | null = null;
+  if (parsed.data.type === "PROJECT") {
+    if (!parsed.data.projectId) return { error: "Pick a project for a PROJECT account." };
+    const proj = await db.project.findFirst({
+      where: { id: parsed.data.projectId, organizationId: workspace.id },
+      select: { id: true },
+    });
+    if (!proj) return { error: "Selected project not found in this workspace." };
+    projectId = proj.id;
   }
   const account = await db.finAccount.create({
     data: {
@@ -31,6 +46,7 @@ export async function createAccount(
       type: parsed.data.type,
       currency: parsed.data.currency,
       openingBalance: parsed.data.openingBalance,
+      projectId,
     },
   });
   await logAudit({
@@ -54,7 +70,10 @@ export async function updateAccount(
   _prev: AccountActionState | undefined,
   formData: FormData,
 ): Promise<AccountActionState> {
-  const { user, workspace } = await requireMembership(slug);
+  const { user, workspace, membership } = await requireMembership(slug);
+  if (membership.role !== "OWNER" && membership.role !== "ADMIN") {
+    return { error: "Only owners and admins can manage accounts." };
+  }
   const parsed = updateSchema.safeParse({
     id: formData.get("id"),
     name: formData.get("name") || undefined,
@@ -64,11 +83,25 @@ export async function updateAccount(
       formData.get("openingBalance") !== null
         ? formData.get("openingBalance")
         : undefined,
+    projectId: formData.get("projectId") ?? undefined,
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
   }
   const { id, ...rest } = parsed.data;
+  // Keep the project link consistent with the type.
+  if (rest.type !== undefined) {
+    if (rest.type === "PROJECT") {
+      if (!rest.projectId) return { error: "Pick a project for a PROJECT account." };
+      const proj = await db.project.findFirst({
+        where: { id: rest.projectId, organizationId: workspace.id },
+        select: { id: true },
+      });
+      if (!proj) return { error: "Selected project not found in this workspace." };
+    } else {
+      rest.projectId = null;
+    }
+  }
   await db.finAccount.updateMany({
     where: { id, organizationId: workspace.id },
     data: rest,
@@ -86,7 +119,8 @@ export async function updateAccount(
 }
 
 export async function archiveAccount(slug: string, id: string) {
-  const { user, workspace } = await requireMembership(slug);
+  const { user, workspace, membership } = await requireMembership(slug);
+  if (membership.role !== "OWNER" && membership.role !== "ADMIN") return;
   await db.finAccount.updateMany({
     where: { id, organizationId: workspace.id },
     data: { archivedAt: new Date() },
@@ -103,7 +137,8 @@ export async function archiveAccount(slug: string, id: string) {
 }
 
 export async function unarchiveAccount(slug: string, id: string) {
-  const { user, workspace } = await requireMembership(slug);
+  const { user, workspace, membership } = await requireMembership(slug);
+  if (membership.role !== "OWNER" && membership.role !== "ADMIN") return;
   await db.finAccount.updateMany({
     where: { id, organizationId: workspace.id },
     data: { archivedAt: null },

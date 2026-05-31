@@ -47,6 +47,7 @@ export type Action =
   | 'attachment.upload' | 'attachment.delete'
   | 'label.manage' | 'milestone.manage'
   | 'dependency.manage'
+  | 'chat.send' | 'chat.read' | 'chat.channel.manage'
 
 const MATRIX: Record<Action, Role[]> = {
   'workspace.update':              ['OWNER', 'ADMIN'],
@@ -59,14 +60,17 @@ const MATRIX: Record<Action, Role[]> = {
   'project.delete':                ['OWNER', 'ADMIN'],
   'task.create':                   ['OWNER', 'ADMIN', 'MEMBER'],
   'task.update':                   ['OWNER', 'ADMIN', 'MEMBER'],
-  'task.delete':                   ['OWNER', 'ADMIN', 'MEMBER'], // MEMBER constrained at call site (own only)
+  'task.delete':                   ['OWNER', 'ADMIN', 'MEMBER'],
   'comment.create':                ['OWNER', 'ADMIN', 'MEMBER'],
-  'comment.delete':                ['OWNER', 'ADMIN', 'MEMBER'], // MEMBER constrained at call site (own only)
+  'comment.delete':                ['OWNER', 'ADMIN', 'MEMBER'],
   'attachment.upload':             ['OWNER', 'ADMIN', 'MEMBER'],
-  'attachment.delete':             ['OWNER', 'ADMIN', 'MEMBER'], // MEMBER constrained at call site (own only)
+  'attachment.delete':             ['OWNER', 'ADMIN', 'MEMBER'],
   'label.manage':                  ['OWNER', 'ADMIN', 'MEMBER'],
   'milestone.manage':              ['OWNER', 'ADMIN', 'MEMBER'],
   'dependency.manage':             ['OWNER', 'ADMIN', 'MEMBER'],
+  'chat.send':                     ['OWNER', 'ADMIN', 'MEMBER'],
+  'chat.read':                     ['OWNER', 'ADMIN', 'MEMBER', 'VIEWER'],
+  'chat.channel.manage':           ['OWNER', 'ADMIN'],
 }
 
 /** Pure predicate. Does this role permit this action? */

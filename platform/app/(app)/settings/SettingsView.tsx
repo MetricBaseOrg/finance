@@ -31,12 +31,11 @@ function Row({ label, sub, children, last }: { label: string; sub?: string; chil
   )
 }
 
-export function SettingsView({ userName, email, role, orgName, orgCount }: {
-  userName: string; email: string; role: string; orgName: string; orgCount: number
+export function SettingsView({ role, orgName, orgCount, profileForm }: {
+  userName?: string; email?: string; role: string; orgName: string; orgCount: number; profileForm?: React.ReactNode
 }) {
   const [notif, setNotif] = useState(true)
   const [digest, setDigest] = useState(false)
-  const initials = userName.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase()
 
   return (
     <div style={{ maxWidth: 760, margin: '0 auto', padding: '26px var(--ws-gutter) 60px' }} className="ws-fade">
@@ -45,15 +44,13 @@ export function SettingsView({ userName, email, role, orgName, orgCount }: {
         <h1 style={{ fontSize: 23, fontWeight: 800, letterSpacing: '-0.025em', color: 'var(--mb-ink)', margin: 0 }}>Account &amp; settings</h1>
       </div>
 
-      {/* profile */}
+      {/* profile (editable) */}
+      <SectionHead eyebrow="Profile" title="Your profile" sub={`${role} · ${orgName}`} />
+      {profileForm}
+
+      {/* preferences */}
+      <SectionHead eyebrow="Preferences" title="Notifications" />
       <div className="ws-card" style={{ marginBottom: 18 }}>
-        <div style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: 15, borderBottom: '1px solid var(--mb-divider)' }}>
-          <span style={{ width: 54, height: 54, borderRadius: '50%', background: 'var(--mb-brand)', color: '#fff', display: 'grid', placeItems: 'center', fontSize: 19, fontWeight: 700 }}>{initials}</span>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 16, fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--mb-ink)' }}>{userName}</div>
-            <div style={{ fontSize: 12, color: 'var(--mb-ink-muted)' }}>{email} · {role} · {orgName}</div>
-          </div>
-        </div>
         <Row label="Email notifications" sub="Task assignments and alerts across all apps"><Toggle on={notif} onChange={setNotif} /></Row>
         <Row label="Daily digest" sub="A morning summary of cross-app activity" last><Toggle on={digest} onChange={setDigest} /></Row>
       </div>
@@ -72,6 +69,18 @@ export function SettingsView({ userName, email, role, orgName, orgCount }: {
             <Btn kind="quiet" href={a.href} style={{ color: 'var(--mb-brand)' }}>Open</Btn>
           </div>
         ))}
+      </div>
+
+      {/* team / agents */}
+      <SectionHead eyebrow="Team" title="AI agents" sub="AI members that act on tasks and in chat for this workspace" />
+      <div className="ws-card" style={{ marginBottom: 18 }}>
+        <Row
+          label="AI agents"
+          sub={role === 'OWNER' || role === 'ADMIN' ? 'Create, configure & manage agents' : 'View the workspace agents'}
+          last
+        >
+          <Btn kind="quiet" href="/settings/agents" style={{ color: 'var(--mb-brand)' }}>Manage</Btn>
+        </Row>
       </div>
 
       {/* security */}

@@ -13,6 +13,7 @@ export function FinanceChrome({ slug, orgName }: { slug: string; orgName: string
     { id: 'budgets', label: 'Budgets', href: `${base}/budgets` },
     { id: 'recurring', label: 'Recurring', href: `${base}/recurring` },
     { id: 'investments', label: 'Investments', href: `${base}/investments` },
+    { id: 'projects', label: 'Projects', href: `${base}/projects` },
     { id: 'reports', label: 'Reports', href: `${base}/reports` },
     { id: 'settings', label: 'Settings', href: `${base}/settings/categories` },
   ]

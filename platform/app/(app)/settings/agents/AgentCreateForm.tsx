@@ -13,6 +13,7 @@ const SCOPE_LABELS: Record<(typeof AGENT_SCOPES)[number], string> = {
   finance: "Finance (read)",
   field: "Field (read)",
   chat: "Team chat",
+  search: "Search",
 };
 
 export function AgentCreateForm({ slug }: { slug: string }) {

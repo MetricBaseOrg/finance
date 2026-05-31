@@ -23,6 +23,7 @@ export default async function TransactionsPage({
     type?: string;
     acct?: string;
     cat?: string;
+    project?: string;
     q?: string;
     page?: string;
   }>;
@@ -32,7 +33,7 @@ export default async function TransactionsPage({
   const { workspace, membership } = await requireMembership(slug);
   const canApprove = membership.role === "OWNER" || membership.role === "ADMIN";
 
-  const [accounts, categories] = await Promise.all([
+  const [accounts, categories, projects] = await Promise.all([
     db.finAccount.findMany({
       where: { organizationId: workspace.id, archivedAt: null },
       orderBy: { createdAt: "asc" },
@@ -40,6 +41,11 @@ export default async function TransactionsPage({
     db.category.findMany({
       where: { organizationId: workspace.id },
       orderBy: [{ kind: "asc" }, { name: "asc" }],
+    }),
+    db.project.findMany({
+      where: { organizationId: workspace.id, status: { not: "ARCHIVED" } },
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
     }),
   ]);
 
@@ -75,6 +81,7 @@ export default async function TransactionsPage({
   if (sp.type && ["INCOME", "EXPENSE", "TRANSFER"].includes(sp.type)) where.type = sp.type;
   if (sp.acct) where.finAccountId = sp.acct;
   if (sp.cat) where.categoryId = sp.cat;
+  if (sp.project) where.projectId = sp.project;
   if (sp.q) where.memo = { contains: sp.q, mode: "insensitive" };
 
   const page = Math.max(1, Number(sp.page) || 1);
@@ -131,12 +138,15 @@ export default async function TransactionsPage({
           id: a.id,
           name: a.name,
           currency: a.currency,
+          type: a.type,
+          projectId: a.projectId,
         }))}
         categories={categories.map((c) => ({
           id: c.id,
           name: c.name,
           kind: c.kind,
         }))}
+        projects={projects}
       />
 
       <ImportCsvSection
@@ -149,6 +159,7 @@ export default async function TransactionsPage({
         slug={slug}
         accounts={accounts.map((a) => ({ id: a.id, name: a.name }))}
         categories={categories.map((c) => ({ id: c.id, name: c.name, kind: c.kind }))}
+        projects={projects}
       />
 
       {canApprove && pendingTxns.length > 0 && (

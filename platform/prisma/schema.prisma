@@ -33,6 +33,7 @@ model User {
   accounts        Account[]
   sessions        Session[]
   members         Membership[]
+  msAccount       MicrosoftAccount?
   activities      Activity[]
   notifications   Notification[]
   auditLogs       AuditLog[]      @relation("AuditActor")
@@ -40,6 +41,12 @@ model User {
   txnApproved     Transaction[]   @relation("TxnApprover")
   invitesSent     OrgInvite[]     @relation("InvitesSent")
   invitesAccepted OrgInvite[]     @relation("InvitesAccepted")
+
+  agents          Agent[]
+  agentCreated    Agent[]        @relation("AgentCreator")
+  createdChannels Channel[]       @relation("ChannelCreator")
+  channelMembers  ChannelMember[]
+  chatMessages    ChatMessage[]
 
   comments            Comment[]
   createdTasks        Task[]             @relation("TaskCreator")
@@ -83,6 +90,22 @@ model Session {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+model MicrosoftAccount {
+  id                String    @id @default(cuid())
+  userId            String    @unique
+  msUserId          String
+  email             String?
+  displayName       String?
+  refreshTokenEnc   String
+  accessToken       String?
+  accessTokenExpiry DateTime?
+  scope             String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model VerificationToken {
@@ -132,6 +155,13 @@ model Organization {
   transfers           Transfer[]
   liftings            Lifting[]
   targets             Target[]
+
+  // Agent module
+  agents              Agent[]
+  agentRuns           AgentRun[]
+
+  // Chat module
+  channels            Channel[]
 }
 
 model Membership {
@@ -230,11 +260,105 @@ model Activity {
   @@index([organizationId, module])
 }
 
+model Agent {
+  id             String   @id @default(cuid())
+  organizationId String
+  userId         String
+  name           String
+  instructions   String
+  model          String?
+  scopes         String[] @default(["tasks"])
+  enabled        Boolean  @default(true)
+  createdById    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdBy    User?        @relation("AgentCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  runs         AgentRun[]
+
+  @@index([organizationId])
+}
+
+model AgentRun {
+  id             String    @id @default(cuid())
+  agentId        String
+  organizationId String
+  trigger        String
+  status         String    @default("queued")
+  taskId         String?
+  channelId      String?
+  sourceKey      String?
+  prompt         String?
+  result         String?
+  error          String?
+  toolCalls      Int       @default(0)
+  inputTokens    Int?
+  outputTokens   Int?
+  createdAt      DateTime  @default(now())
+  finishedAt     DateTime?
+
+  agent      Agent      @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([agentId, status])
+  @@index([organizationId])
+}
+
+model Channel {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  slug           String
+  kind           String   @default("CHANNEL")
+  isPrivate      Boolean  @default(false)
+  createdById    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdBy    User?           @relation("ChannelCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  members      ChannelMember[]
+  messages     ChatMessage[]
+
+  @@unique([organizationId, slug])
+  @@index([organizationId])
+}
+
+model ChannelMember {
+  id         String    @id @default(cuid())
+  channelId  String
+  userId     String
+  lastReadAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  channel Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([channelId, userId])
+  @@index([userId])
+}
+
+model ChatMessage {
+  id        String    @id @default(cuid())
+  channelId String
+  userId    String
+  content   String
+  createdAt DateTime  @default(now())
+  editedAt  DateTime?
+
+  channel Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([channelId, createdAt])
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // Finance module (ported from financial-tracker; workspaceId → organizationId)
 enum OrgType {
   COMPANY
-  PERSON
+  INDIVIDUAL
 }
 
 enum Role {
@@ -551,19 +675,19 @@ model Project {
   status         String      @default("ACTIVE")
   organizationId String
   createdById    String?
+  budget         Decimal?    @db.Decimal(20, 4)
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
-  // Relation field named `workspace` (ProBase term) but points at Organization.
   workspace      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   createdBy      User?       @relation(fields: [createdById], references: [id], onDelete: SetNull)
   tasks          Task[]
   milestones     Milestone[]
   labels         Label[]
-  // Finance attribution (Phase 1 columns wired here).
   finAccounts    FinAccount[]
   transactions   Transaction[]
 
   @@index([organizationId])
+  @@index([createdById])
 }
 
 model Task {

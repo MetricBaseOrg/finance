@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useRef, useEffect } from "react";
+import { useActionState, useRef, useEffect, useState } from "react";
 import { createAccount, type AccountActionState } from "@/server/actions/accounts";
 import { GoldButton } from "@/components/mb/GoldButton";
 import { Eyebrow } from "@/components/mb/Eyebrow";
@@ -11,15 +11,18 @@ const TYPES = [
   "CRYPTO",
   "BROKERAGE",
   "CREDIT",
+  "PROJECT",
   "OTHER",
 ] as const;
 
 export function AccountCreateForm({
   slug,
   workspaceBase,
+  projects = [],
 }: {
   slug: string;
   workspaceBase: string;
+  projects?: { id: string; name: string }[];
 }) {
   const action = createAccount.bind(null, slug);
   const [state, formAction, pending] = useActionState<
@@ -27,10 +30,12 @@ export function AccountCreateForm({
     FormData
   >(action, {});
   const formRef = useRef<HTMLFormElement>(null);
+  const [type, setType] = useState<string>("BANK");
 
   useEffect(() => {
     if (!pending && !state?.error) {
       formRef.current?.reset();
+      setType("BANK");
     }
   }, [pending, state]);
 
@@ -55,7 +60,7 @@ export function AccountCreateForm({
             <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-gray-3">
               Type
             </span>
-            <select name="type" className="mb-input" defaultValue="BANK">
+            <select name="type" className="mb-input" value={type} onChange={(e) => setType(e.target.value)}>
               {TYPES.map((t) => (
                 <option key={t} value={t}>
                   {t}
@@ -63,6 +68,22 @@ export function AccountCreateForm({
               ))}
             </select>
           </label>
+          {type === "PROJECT" && (
+            <label className="flex flex-col gap-1.5 sm:col-span-2 md:col-span-5">
+              <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-gray-3">
+                Linked project
+              </span>
+              <select name="projectId" className="mb-input" required defaultValue="">
+                <option value="" disabled>Select a project…</option>
+                {projects.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+              {projects.length === 0 && (
+                <span className="font-mono text-[10px] text-gray-3">No projects yet — create one in /projects first.</span>
+              )}
+            </label>
+          )}
           <label className="flex flex-col gap-1.5">
             <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-gray-3">
               Currency

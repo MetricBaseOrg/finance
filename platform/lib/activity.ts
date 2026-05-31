@@ -142,4 +142,19 @@ export async function notify(params: {
       })
     }
   }
+
+  // If any recipient is an AI agent, dispatch a run (fire-and-forget). Lazy
+  // import keeps the agent runtime + Anthropic SDK out of this module's bundle
+  // and avoids a static import cycle.
+  if (params.taskId && (params.kind === 'mention' || params.kind === 'task.assigned')) {
+    void import('@/lib/agent/dispatch')
+      .then(m => m.maybeDispatchAgents({
+        recipientUserIds: recipients,
+        kind: params.kind,
+        actorId: params.actorId,
+        taskId: params.taskId,
+        commentId: params.commentId,
+      }))
+      .catch(err => console.error('agent dispatch failed', err))
+  }
 }
