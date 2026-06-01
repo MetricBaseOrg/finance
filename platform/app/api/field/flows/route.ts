@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getFieldContext, FIELD_ENUMS, logFieldAudit } from '@/server/field'
+import { getFieldContext, createFlow } from '@/server/field'
 
 export const dynamic = 'force-dynamic'
 
@@ -33,39 +33,7 @@ export async function POST(req: NextRequest) {
   if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await req.json().catch(() => ({}))
-  const nodeId = String(body.nodeId ?? '')
-  const date = String(body.date ?? '').slice(0, 10)
-  const flowType = String(body.flowType ?? '').trim().toLowerCase()
-  const volume = Number(body.volume)
-
-  if (!nodeId || !date) return NextResponse.json({ error: 'nodeId and date are required' }, { status: 400 })
-  if (!FIELD_ENUMS.FLOW_TYPES.includes(flowType)) {
-    return NextResponse.json({ error: `flowType must be one of ${FIELD_ENUMS.FLOW_TYPES.join(', ')}` }, { status: 400 })
-  }
-  if (!Number.isFinite(volume)) return NextResponse.json({ error: 'volume must be a number' }, { status: 400 })
-
-  // Verify node belongs to the org.
-  const node = await prisma.node.findFirst({ where: { id: nodeId, organizationId: ctx.organizationId } })
-  if (!node) return NextResponse.json({ error: 'Unknown node' }, { status: 400 })
-
-  const status = FIELD_ENUMS.FLOW_STATUS.includes(body.status) ? body.status : 'actual'
-  const flow = await prisma.flow.create({
-    data: {
-      organizationId: ctx.organizationId,
-      nodeId,
-      date,
-      flowType,
-      volume,
-      swPct: body.swPct != null ? Number(body.swPct) : null,
-      category: body.category ? String(body.category) : null,
-      status,
-      memo: body.memo ? String(body.memo) : null,
-      reportedBy: body.reportedBy ? String(body.reportedBy) : null,
-    },
-  })
-  await logFieldAudit({
-    organizationId: ctx.organizationId, userId: ctx.userId,
-    action: 'CREATE', entityType: 'FLOW', entityId: flow.id, summary: `Logged ${flow.flowType} ${flow.volume} on ${flow.date}`,
-  })
-  return NextResponse.json(flow, { status: 201 })
+  const result = await createFlow({ organizationId: ctx.organizationId, userId: ctx.userId }, body)
+  if (!result.ok) return NextResponse.json({ error: result.error }, { status: result.status })
+  return NextResponse.json(result.flow, { status: 201 })
 }

@@ -31,8 +31,9 @@ function Row({ label, sub, children, last }: { label: string; sub?: string; chil
   )
 }
 
-export function SettingsView({ role, orgName, orgCount, profileForm }: {
-  userName?: string; email?: string; role: string; orgName: string; orgCount: number; profileForm?: React.ReactNode
+export function SettingsView({ role, orgName, orgCount, profileForm, telegramConnect }: {
+  userName?: string; email?: string; role: string; orgName: string; orgCount: number
+  profileForm?: React.ReactNode; telegramConnect?: React.ReactNode
 }) {
   const [notif, setNotif] = useState(true)
   const [digest, setDigest] = useState(false)
@@ -47,6 +48,14 @@ export function SettingsView({ role, orgName, orgCount, profileForm }: {
       {/* profile (editable) */}
       <SectionHead eyebrow="Profile" title="Your profile" sub={`${role} · ${orgName}`} />
       {profileForm}
+
+      {/* telegram bot */}
+      {telegramConnect && (
+        <>
+          <SectionHead eyebrow="Integrations" title="Telegram bot" sub="Link your Telegram to use the bot with your workspace role" />
+          {telegramConnect}
+        </>
+      )}
 
       {/* preferences */}
       <SectionHead eyebrow="Preferences" title="Notifications" />

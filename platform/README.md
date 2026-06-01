@@ -68,7 +68,7 @@ See [`.env.example`](./.env.example). Key vars: `DATABASE_URL` / `DIRECT_URL` (N
 ## Companion services
 
 - **`field-engine/`** — Python (Flask) analytics service for the Field module; the Next app proxies to it via `/api/field/analytics/*`.
-- **`bot/`** — Telegram bot worker skeleton.
+- **`bot/`** — Telegram bot worker (python-telegram-bot). Thin client: calls `/api/bot/*` with `BOT_SERVICE_TOKEN`. Users link their account in **Settings → Telegram** (one-time code → `/start <code>`); the bot then acts under the user's *active* workspace (`/workspace` to switch). Commands are role-gated by `lib/permissions.ts`: `field.read` (Viewers+) for `/summary` `/recap` `/stock` `/liftings`; `field.write` (Members+) for `/addflow`. Needs `TELEGRAM_BOT_TOKEN`, `BOT_SERVICE_TOKEN`, `TELEGRAM_BOT_USERNAME`. **Full docs: [`bot/README.md`](./bot/README.md).**
 - **`docker-compose.yml`** — web + bot + field-engine + Caddy.
 
 ## Cron routes (Bearer `CRON_SECRET`)
@@ -76,3 +76,15 @@ See [`.env.example`](./.env.example). Key vars: `DATABASE_URL` / `DIRECT_URL` (N
 - `POST /api/cron/email-digest` — daily notification digest
 - `POST /api/cron/recurring-rollover` — spawn overdue recurring tasks
 - `POST /api/cron/agent-sweep` — backstop dispatch for agent-directed work
+
+These do nothing unless **`CRON_SECRET` is set** (the routes return `500` /
+`401` otherwise) **and something calls them on a schedule**. The compose stack
+includes a `cron` service (busybox `crond`, `cron/entrypoint.sh`) that invokes
+all three over the internal network — digest at 00:00 UTC (07:00 WIB), rollover
+at 00:05, agent-sweep hourly. Edit `cron/entrypoint.sh` to change the schedule.
+
+Smoke-test manually (GET is allowed with the secret as a query param):
+`/api/cron/email-digest?secret=<CRON_SECRET>` → `{"ok":true,"sent":N}`.
+
+> Email sending also needs `RESEND_API_KEY` + `EMAIL_FROM`; without them
+> `lib/email.ts` is a silent no-op (logs `[email:disabled]` in dev).

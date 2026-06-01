@@ -18,17 +18,22 @@ datasource db {
 // ─── Auth.js v5 standard models ──────────────────────────────────────────────
 
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String    @unique
-  emailVerified DateTime?
-  image         String?
-  password      String?
-  kind          String    @default("HUMAN")
-  title         String?
-  bio           String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id                  String    @id @default(cuid())
+  name                String?
+  email               String    @unique
+  emailVerified       DateTime?
+  image               String?
+  password            String?
+  kind                String    @default("HUMAN")
+  title               String?
+  bio                 String?
+  // Telegram bot linking — set only after a verified /start <code> handshake.
+  telegramUserId      BigInt?   @unique @map("telegram_user_id")
+  telegramUsername    String?   @map("telegram_username")
+  telegramLinkedAt    DateTime? @map("telegram_linked_at")
+  telegramActiveOrgId String?   @map("telegram_active_org_id")
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
   accounts        Account[]
   sessions        Session[]
@@ -36,14 +41,14 @@ model User {
   msAccount       MicrosoftAccount?
   activities      Activity[]
   notifications   Notification[]
-  auditLogs       AuditLog[]      @relation("AuditActor")
-  txnCreated      Transaction[]   @relation("TxnCreator")
-  txnApproved     Transaction[]   @relation("TxnApprover")
-  invitesSent     OrgInvite[]     @relation("InvitesSent")
-  invitesAccepted OrgInvite[]     @relation("InvitesAccepted")
+  auditLogs       AuditLog[]        @relation("AuditActor")
+  txnCreated      Transaction[]     @relation("TxnCreator")
+  txnApproved     Transaction[]     @relation("TxnApprover")
+  invitesSent     OrgInvite[]       @relation("InvitesSent")
+  invitesAccepted OrgInvite[]       @relation("InvitesAccepted")
 
   agents          Agent[]
-  agentCreated    Agent[]        @relation("AgentCreator")
+  agentCreated    Agent[]         @relation("AgentCreator")
   createdChannels Channel[]       @relation("ChannelCreator")
   channelMembers  ChannelMember[]
   chatMessages    ChatMessage[]
@@ -57,8 +62,10 @@ model User {
   createdProjects     Project[]
   createdTemplates    Template[]
 
-  fieldDashboards     UserDashboard[]
-  fieldFormulas       UserFormula[]
+  fieldDashboards UserDashboard[]
+  fieldFormulas   UserFormula[]
+
+  telegramLinkTokens TelegramLinkToken[]
 }
 
 model Account {
@@ -152,22 +159,22 @@ model Organization {
   investmentPositions InvestmentPosition[]
 
   // Projects module
-  projects            Project[]
-  templates           Template[]
+  projects  Project[]
+  templates Template[]
 
   // Field module
-  nodes               Node[]
-  flows               Flow[]
-  transfers           Transfer[]
-  liftings            Lifting[]
-  targets             Target[]
+  nodes     Node[]
+  flows     Flow[]
+  transfers Transfer[]
+  liftings  Lifting[]
+  targets   Target[]
 
   // Agent module
-  agents              Agent[]
-  agentRuns           AgentRun[]
+  agents    Agent[]
+  agentRuns AgentRun[]
 
   // Chat module
-  channels            Channel[]
+  channels Channel[]
 }
 
 model Membership {
@@ -231,7 +238,7 @@ model AuditLog {
 }
 
 model Notification {
-  id             String   @id @default(cuid())
+  id             String    @id @default(cuid())
   organizationId String
   userId         String
   actorId        String?
@@ -243,7 +250,7 @@ model Notification {
   // Deep link into the relevant module page.
   href           String?
   readAt         DateTime?
-  createdAt      DateTime @default(now())
+  createdAt      DateTime  @default(now())
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -305,7 +312,7 @@ model AgentRun {
   createdAt      DateTime  @default(now())
   finishedAt     DateTime?
 
-  agent      Agent      @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  agent        Agent        @relation(fields: [agentId], references: [id], onDelete: Cascade)
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@index([agentId, status])
@@ -460,7 +467,7 @@ model Category {
 }
 
 model Transaction {
-  id               String     @id @default(cuid())
+  id               String    @id @default(cuid())
   organizationId   String
   // Optional attribution to a ProBase Project (relation wired in Phase 2).
   projectId        String?
@@ -469,17 +476,17 @@ model Transaction {
   categoryId       String?
   positionId       String?
   date             DateTime
-  amount           Decimal    @db.Decimal(20, 4)
+  amount           Decimal   @db.Decimal(20, 4)
   currency         String
-  fxRate           Decimal    @db.Decimal(20, 8)
-  baseAmount       Decimal    @db.Decimal(20, 4)
+  fxRate           Decimal   @db.Decimal(20, 8)
+  baseAmount       Decimal   @db.Decimal(20, 4)
   type             TxnType
-  status           String     @default("POSTED")
+  status           String    @default("POSTED")
   memo             String?
   createdById      String?
   approvedById     String?
   approvedAt       DateTime?
-  createdAt        DateTime   @default(now())
+  createdAt        DateTime  @default(now())
 
   organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   project        Project?         @relation(fields: [projectId], references: [id], onDelete: SetNull)
@@ -656,15 +663,15 @@ model Dividend {
 // Reusable blueprint scoped to an org. `kind` is "TASK" or "PROJECT";
 // `content` is JSON-encoded text describing what to instantiate.
 model Template {
-  id             String   @id @default(cuid())
+  id             String       @id @default(cuid())
   organizationId String
   kind           String
   name           String
   description    String?
   content        String
   createdById    String
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
   // Relation field named `workspace` (ProBase term) but points at Organization.
   workspace      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   createdBy      User         @relation(fields: [createdById], references: [id])
@@ -673,40 +680,40 @@ model Template {
 }
 
 model Project {
-  id             String      @id @default(cuid())
+  id             String        @id @default(cuid())
   name           String
   description    String?
-  color          String      @default("#6366f1")
+  color          String        @default("#6366f1")
   icon           String?
-  status         String      @default("ACTIVE")
+  status         String        @default("ACTIVE")
   organizationId String
   createdById    String?
-  budget         Decimal?    @db.Decimal(20, 4)
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
-  workspace      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  createdBy      User?       @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  budget         Decimal?      @db.Decimal(20, 4)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  workspace      Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdBy      User?         @relation(fields: [createdById], references: [id], onDelete: SetNull)
   tasks          Task[]
   milestones     Milestone[]
   labels         Label[]
   finAccounts    FinAccount[]
   transactions   Transaction[]
   // Auto-provisioned per org to hold FieldFlow-assigned work (see lib/field/tasks.ts).
-  isFieldOps     Boolean     @default(false)
+  isFieldOps     Boolean       @default(false)
 
   @@index([organizationId])
   @@index([createdById])
 }
 
 model Task {
-  id              String     @id @default(cuid())
+  id              String           @id @default(cuid())
   title           String
   description     String?
-  status          String     @default("TODO")
-  priority        String     @default("MEDIUM")
+  status          String           @default("TODO")
+  priority        String           @default("MEDIUM")
   dueDate         DateTime?
   startDate       DateTime?
-  order           Float      @default(0)
+  order           Float            @default(0)
   projectId       String
   assigneeId      String?
   creatorId       String
@@ -719,16 +726,16 @@ model Task {
   // Polymorphic across node/flow/lifting/target (no FK) — type + id, nullable.
   fieldRefType    String?
   fieldRefId      String?
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
-  project         Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  creator         User       @relation("TaskCreator", fields: [creatorId], references: [id])
-  assignee        User?      @relation("TaskAssignee", fields: [assigneeId], references: [id])
-  parent          Task?      @relation("Subtasks", fields: [parentId], references: [id], onDelete: Cascade)
-  subTasks        Task[]     @relation("Subtasks")
-  milestone       Milestone? @relation(fields: [milestoneId], references: [id])
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  project         Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  creator         User             @relation("TaskCreator", fields: [creatorId], references: [id])
+  assignee        User?            @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  parent          Task?            @relation("Subtasks", fields: [parentId], references: [id], onDelete: Cascade)
+  subTasks        Task[]           @relation("Subtasks")
+  milestone       Milestone?       @relation(fields: [milestoneId], references: [id])
   comments        Comment[]
-  labels          Label[]    @relation("TaskLabels")
+  labels          Label[]          @relation("TaskLabels")
   activities      TaskActivity[]
   attachments     TaskAttachment[]
   blocking        TaskDependency[] @relation("blocker")
@@ -828,6 +835,9 @@ model TaskNotification {
   actorId   String?
   metadata  String?
   read      Boolean  @default(false)
+  // Set when this notification has been included in a digest email, so it is
+  // never re-sent in a later digest (even while still unread).
+  digestedAt DateTime? @map("digested_at")
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -986,6 +996,20 @@ model UserFormula {
   @@unique([userId, name])
   @@index([userId])
   @@map("user_formulas")
+}
+
+// One-time codes for the Settings → Telegram "Connect" handshake. Short-lived;
+// redeemed by the bot's /start <code> via /api/bot/link, then deleted.
+model TelegramLinkToken {
+  code      String   @id
+  userId    String
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("telegram_link_tokens")
 }
 
 // Telegram reminder opt-ins (bot worker).

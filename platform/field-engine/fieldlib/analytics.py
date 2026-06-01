@@ -148,7 +148,7 @@ def get_monthly_summary(company_id, year, month):
                FROM flows f JOIN nodes n ON n.id = f.node_id
                WHERE f.company_id=? AND f.flow_type='inflow'
                  AND strftime('%Y-%m', f.date) = ?
-               GROUP BY f.node_id""",
+               GROUP BY n.id""",
             (company_id, month_str)).fetchall()
 
         liftings = conn.execute(
@@ -217,7 +217,7 @@ def get_flow_sankey(company_id, year=None, date_from=None, date_to=None):
                JOIN nodes fn ON fn.id = t.from_node_id
                JOIN nodes tn ON tn.id = t.to_node_id
                WHERE t.company_id=? {date_cond_xfer}
-               GROUP BY t.from_node_id, t.to_node_id ORDER BY vol DESC""",
+               GROUP BY t.from_node_id, t.to_node_id, fn.name, tn.name ORDER BY vol DESC""",
             params_xfer).fetchall()
 
         # Lifting outflows (storage/terminal → buyer)
@@ -228,7 +228,7 @@ def get_flow_sankey(company_id, year=None, date_from=None, date_to=None):
                LEFT JOIN nodes fn ON fn.id = l.from_node_id
                LEFT JOIN nodes bn ON bn.id = l.buyer_node_id
                WHERE l.company_id=? AND l.status='completed' {date_cond_lift}
-               GROUP BY l.from_node_id, l.buyer_node_id""",
+               GROUP BY l.from_node_id, l.buyer_node_id, fn.name, bn.name""",
             params_lift).fetchall()
 
         edges = []
@@ -254,7 +254,7 @@ def get_flow_sankey(company_id, year=None, date_from=None, date_to=None):
                 JOIN nodes fn ON fn.id = transfers.from_node_id
                 JOIN nodes tn ON tn.id = transfers.to_node_id
                 WHERE transfers.company_id=? {date_cond_xfer.replace('t.', 'transfers.')}
-                GROUP BY transfers.from_node_id, transfers.to_node_id""",
+                GROUP BY transfers.from_node_id, transfers.to_node_id, fn.name, tn.name""",
             params_xfer).fetchall()
         edge_lift = conn.execute(
             f"""SELECT fn.name as f, bn.name as t,
@@ -264,7 +264,7 @@ def get_flow_sankey(company_id, year=None, date_from=None, date_to=None):
                 LEFT JOIN nodes fn ON fn.id = liftings.from_node_id
                 LEFT JOIN nodes bn ON bn.id = liftings.buyer_node_id
                 WHERE liftings.company_id=? AND liftings.status='completed' {date_cond_lift.replace('l.', 'liftings.')}
-                GROUP BY liftings.from_node_id, liftings.buyer_node_id""",
+                GROUP BY liftings.from_node_id, liftings.buyer_node_id, fn.name, bn.name""",
             params_lift).fetchall()
 
         edge_lg = {}

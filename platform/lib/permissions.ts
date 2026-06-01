@@ -48,6 +48,7 @@ export type Action =
   | 'label.manage' | 'milestone.manage'
   | 'dependency.manage'
   | 'chat.send' | 'chat.read' | 'chat.channel.manage'
+  | 'field.read' | 'field.write' | 'field.manage'
 
 const MATRIX: Record<Action, Role[]> = {
   'workspace.update':              ['OWNER', 'ADMIN'],
@@ -71,6 +72,11 @@ const MATRIX: Record<Action, Role[]> = {
   'chat.send':                     ['OWNER', 'ADMIN', 'MEMBER'],
   'chat.read':                     ['OWNER', 'ADMIN', 'MEMBER', 'VIEWER'],
   'chat.channel.manage':           ['OWNER', 'ADMIN'],
+  // Field ops (FieldFlow + Telegram bot): viewers read reports/recap/lifting;
+  // members add/edit/delete records; admins/owners manage config (targets, etc.).
+  'field.read':                    ['OWNER', 'ADMIN', 'MEMBER', 'VIEWER'],
+  'field.write':                   ['OWNER', 'ADMIN', 'MEMBER'],
+  'field.manage':                  ['OWNER', 'ADMIN'],
 }
 
 /** Pure predicate. Does this role permit this action? */

@@ -128,9 +128,11 @@ export async function sendDigests(opts: { instantWindowMinutes?: number } = {}):
   const windowMin = opts.instantWindowMinutes ?? 60
   const cutoff = new Date(Date.now() - windowMin * 60 * 1000)
 
-  // Group unread notifications by user
+  // Group unread, not-yet-digested notifications by user. `digestedAt: null`
+  // ensures each notification appears in at most one digest, even if the user
+  // never reads it in-app.
   const unread = await prisma.taskNotification.findMany({
-    where: { read: false, createdAt: { lte: cutoff } },
+    where: { read: false, digestedAt: null, createdAt: { lte: cutoff } },
     orderBy: { createdAt: 'desc' },
   })
   if (unread.length === 0) return 0
@@ -191,7 +193,15 @@ export async function sendDigests(opts: { instantWindowMinutes?: number } = {}):
       html,
       text: rows.map(r => digestLine(r)).join('\n'),
     })
-    if (ok) sent++
+    if (ok) {
+      sent++
+      // Stamp only what we actually emailed, and only on success — a failed
+      // send stays eligible for the next run rather than being silently dropped.
+      await prisma.taskNotification.updateMany({
+        where: { id: { in: items.map(n => n.id) } },
+        data: { digestedAt: new Date() },
+      })
+    }
   }
   return sent
 }
