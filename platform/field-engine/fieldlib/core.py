@@ -17,11 +17,10 @@ tables/columns identical to FieldFlow's, so the ported SQL matches.
 """
 import os
 import re
-import threading
 from contextlib import contextmanager
 
-import psycopg
 from psycopg.rows import dict_row
+from psycopg_pool import ConnectionPool
 
 DB_PATH = None  # unused (kept so `from .core import DB_PATH` still imports)
 
@@ -56,52 +55,67 @@ def _translate(sql: str) -> str:
     return sql
 
 
-# Reuse one Postgres connection per worker thread. Opening a fresh connection
-# per request means a full TLS handshake to Neon every time (~seconds from a
-# distant client); keeping a warm per-thread connection removes that cost. The
-# engine is read-only, so the connection runs in autocommit mode. waitress
-# serves requests on a thread pool and psycopg connections are not safe to share
-# across threads, hence thread-local rather than a single global.
-_local = threading.local()
+# Pooled Postgres connections. Opening a connection means a full TLS handshake
+# to Neon (~seconds from a distant client). A pool keeps a set of connections
+# warm and pre-opened at startup, so no request — not even the first — pays that
+# cost, and the engine never holds more than `max_size` connections open. The
+# engine is read-only, so connections run in autocommit mode. `check` validates
+# a connection on checkout and transparently recycles ones Neon dropped while
+# idle. waitress serves on a thread pool; the pool hands each request its own
+# connection for the duration of the `with get_db()` block.
+_POOL_MIN = int(os.getenv("FIELD_ENGINE_POOL_MIN", "2"))
+_POOL_MAX = int(os.getenv("FIELD_ENGINE_POOL_MAX", "8"))
 
 
-def _get_conn():
-    conn = getattr(_local, "conn", None)
-    if conn is None or conn.closed:
-        conn = psycopg.connect(_DSN, row_factory=dict_row, autocommit=True)
-        _local.conn = conn
-    return conn
+def _configure(conn):
+    conn.autocommit = True
+
+
+_pool = ConnectionPool(
+    _DSN,
+    min_size=_POOL_MIN,
+    max_size=_POOL_MAX,
+    kwargs={"row_factory": dict_row},
+    configure=_configure,
+    check=ConnectionPool.check_connection,
+    name="field-engine",
+    open=False,
+)
+
+
+def _ensure_open():
+    # Lazy, idempotent open. wait=True pre-warms `min_size` connections so the
+    # first analytics call is already fast; tolerant if Neon is briefly slow.
+    if _pool.closed:
+        _pool.open(wait=True, timeout=30)
 
 
 class _ConnShim:
+    """sqlite3-like wrapper over a pooled connection, with SQL translation."""
+
+    def __init__(self, conn):
+        self._conn = conn
+
     def execute(self, sql, params=()):
-        tsql = _translate(sql)
-        p = tuple(params) if params else None
-        try:
-            return _get_conn().execute(tsql, p)
-        except (psycopg.OperationalError, psycopg.InterfaceError):
-            # Stale/dropped connection (e.g. Neon idle timeout) — reset and retry once.
-            try:
-                if getattr(_local, "conn", None):
-                    _local.conn.close()
-            except Exception:
-                pass
-            _local.conn = None
-            return _get_conn().execute(tsql, p)
+        return self._conn.execute(_translate(sql), tuple(params) if params else None)
 
     def commit(self):
         pass  # autocommit
 
     def rollback(self):
         try:
-            _get_conn().rollback()
+            self._conn.rollback()
         except Exception:
             pass
 
 
 @contextmanager
 def get_db():
-    yield _ConnShim()
+    _ensure_open()
+    # Borrow a connection for the whole `with get_db()` block; callers run all
+    # their .execute().fetch*() within it, then it returns to the pool.
+    with _pool.connection() as conn:
+        yield _ConnShim(conn)
 
 
 def init_db():
