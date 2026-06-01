@@ -269,13 +269,7 @@ function MessageRow({ message, mine }: { message: Message; mine: boolean }) {
   const name = message.user.name ?? message.user.email
   return (
     <div style={{ display: 'flex', gap: 10, flexDirection: mine ? 'row-reverse' : 'row' }}>
-      {isAgent ? (
-        <div style={{ width: 30, height: 30, flexShrink: 0, borderRadius: '50%', background: 'var(--mb-brand)', border: '1px solid var(--mb-border)', display: 'grid', placeItems: 'center', color: '#fff' }}>
-          <Bot className="h-4 w-4" />
-        </div>
-      ) : (
-        <UserAvatar user={message.user} className="h-[30px] w-[30px]" />
-      )}
+      <UserAvatar user={message.user} className="h-[30px] w-[30px]" />
       <div style={{ maxWidth: '70%', minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: mine ? 'flex-end' : 'flex-start', marginBottom: 2 }}>
           <Link href={`/u/${message.user.id}`} style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--mb-ink)', textDecoration: 'none' }}>{name}</Link>
