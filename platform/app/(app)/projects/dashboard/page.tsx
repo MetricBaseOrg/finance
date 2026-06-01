@@ -55,7 +55,9 @@ export default function DashboardPage() {
 
   const hour = new Date().getHours()
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
-  const firstName = session?.user?.name?.split(' ')[0] || 'there'
+  const rawName = session?.user?.name || session?.user?.email?.split('@')[0] || 'there'
+  const firstPart = rawName.split(/[._\s]/)[0]
+  const firstName = firstPart.charAt(0).toUpperCase() + firstPart.slice(1)
 
   const overdueTasks = myTasks.filter(t =>
     t.dueDate && new Date(t.dueDate) < new Date() && !['DONE', 'CANCELLED'].includes(t.status)

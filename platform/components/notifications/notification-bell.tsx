@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Bell, BellDot, Check, AtSign, UserPlus, MessageSquare, ArrowLeftRight } from 'lucide-react'
+import { UserAvatar } from '@/components/ui/user-avatar'
 import { formatDistanceToNow } from 'date-fns'
 import { cn, getInitials } from '@/lib/utils'
 
@@ -270,12 +271,8 @@ export function NotificationBell({ className }: { className?: string }) {
                   )}
                 >
                   <div className="flex-shrink-0 mt-0.5">
-                    {n.actor?.image ? (
-                      <img src={n.actor.image} className="h-8 w-8 rounded-full" alt="" />
-                    ) : n.actor ? (
-                      <div className="h-8 w-8 rounded-full bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 text-[10px] font-bold flex items-center justify-center">
-                        {getInitials(n.actor.name || n.actor.email || '?')}
-                      </div>
+                    {n.actor ? (
+                      <UserAvatar user={n.actor} className="h-8 w-8" />
                     ) : (
                       <div className="h-8 w-8 rounded-full bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 flex items-center justify-center">
                         <Icon className="h-4 w-4" />

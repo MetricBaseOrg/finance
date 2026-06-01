@@ -6,9 +6,7 @@ import { defineConfig } from 'prisma/config'
 loadEnv({ path: '.env.local' })
 loadEnv({ path: '.env' })
 
-// The Prisma CLI (migrate) needs a DIRECT/unpooled connection — pgbouncer
-// drops the advisory lock that `migrate deploy` relies on (P1002 timeout).
-const migrationUrl = process.env.DIRECT_URL ?? process.env.DATABASE_URL ?? ''
+const migrationUrl = process.env.DATABASE_URL ?? ''
 
 export default defineConfig({
   schema: path.join('prisma', 'schema.prisma'),

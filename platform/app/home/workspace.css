@@ -231,6 +231,32 @@ html:has([data-app="workspace"])  { --grid-line: rgba(255, 255, 255, 0.01); }
 /* Hide the sign-in brand panel on narrow screens. */
 @media (max-width: 860px) { .ws-brandpanel { display: none !important; } }
 
+/* App launch grid: 2 cols on desktop, 1 col on phones. */
+.ws-apps-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--ws-gap);
+}
+@media (max-width: 540px) {
+  .ws-apps-grid { grid-template-columns: 1fr; }
+}
+
+/* Auth form panel: column flex + margin:auto on the child keeps the form
+   vertically centred when there is room, and scrolls from the top (not
+   clipped) when the form is taller than the viewport. */
+.ws-formpanel {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+}
+@media (max-width: 860px) {
+  .ws-formpanel { padding: 68px 20px 36px !important; }
+}
+@media (max-width: 480px) {
+  .ws-formpanel { padding: 60px 16px 28px !important; }
+}
+
 /* ── Small-screen overflow fixes ─────────────────────────────────────────── */
 /* Wide tables scroll inside their card instead of pushing the page width.
    Specificity raised to `.mb-root .ws-card` so this beats the blanket

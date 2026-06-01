@@ -1,8 +1,8 @@
 # Deploying the MetricBase platform to a VPS
 
-The stack runs as five Docker services behind Caddy (auto-TLS): **web** (Next.js),
+The stack runs as five Docker services behind a Cloudflare Tunnel: **web** (Next.js),
 **bot** (Telegram), **field-engine** (Python analytics), **cron** (scheduler),
-**caddy** (reverse proxy + TLS). Postgres is **Neon** (managed, not a container).
+**cloudflared** (outbound tunnel to Cloudflare's edge). Postgres is **Neon** (managed, not a container).
 
 > **Region matters.** The analytics engine and web app make many small queries to
 > Neon. Put the VPS in the **same region as your Neon project** (currently
@@ -14,8 +14,10 @@ The stack runs as five Docker services behind Caddy (auto-TLS): **web** (Next.js
 ## 1. Prerequisites
 
 - A VPS (2 vCPU / 4 GB+ recommended) with **Docker Engine + Compose v2**.
-- DNS: an **A record** `apps.metricbase.org → <VPS IP>`, and ports **80 + 443** open.
-  (Caddy needs 80/443 reachable to issue the Let's Encrypt cert.)
+  No inbound ports need to be opened — the tunnel connects outbound.
+- A Cloudflare account with `apps.metricbase.org` on Cloudflare DNS.
+  In **Zero Trust → Networks → Tunnels**: create a tunnel, copy the token, and add a
+  public hostname `apps.metricbase.org` → `http://web:3000`.
 - A Telegram bot from [@BotFather](https://t.me/BotFather) (token + @username).
 - Resend API key + a verified sender domain for `EMAIL_FROM`.
 - Neon connection strings (pooled + direct).
@@ -58,6 +60,9 @@ BOT_SERVICE_TOKEN="<random secret; bot↔web>"
 # Field compute engine.
 FIELD_ENGINE_TOKEN="<random secret; web↔engine>"
 
+# Cloudflare Tunnel token (from Zero Trust → Networks → Tunnels → your tunnel).
+CLOUDFLARE_TUNNEL_TOKEN="<token from Cloudflare dashboard>"
+
 # Optional integrations (leave blank if unused):
 # ANTHROPIC_API_KEY / ANTHROPIC_BASE_URL / ANTHROPIC_MODEL   — AI agents
 # MS_CLIENT_ID / MS_CLIENT_SECRET / MS_TENANT_ID             — OneDrive
@@ -86,7 +91,7 @@ docker compose up -d --build
 
 # 3) Watch it come up.
 docker compose ps
-docker compose logs -f caddy   # wait for the cert to be issued
+docker compose logs -f cloudflared   # wait for "connection registered" / tunnel healthy
 ```
 
 > **Migrations are not automatic.** Run `npm run prisma:deploy` (step 1) on every
@@ -140,7 +145,7 @@ Neon branch/backup from before the migration. Keep deploys small so rollbacks ar
 
 - [ ] `.env` complete; `PLATFORM_API_BASE`/`FIELD_ENGINE_BASE` left at defaults
 - [ ] `AUTH_URL`/`APP_URL` = `https://apps.metricbase.org`
-- [ ] DNS A record live; 80/443 open; Caddy cert issued
+- [ ] Cloudflare Tunnel token set; tunnel shows **Healthy** in Zero Trust dashboard
 - [ ] `prisma migrate deploy` run against prod Neon
 - [ ] BotFather token + `TELEGRAM_BOT_USERNAME` set; bot links successfully
 - [ ] Resend sender verified; digest smoke test returns `sent: N`

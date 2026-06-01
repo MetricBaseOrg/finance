@@ -23,6 +23,9 @@ RUN addgroup -S nodejs && adduser -S nextjs -G nodejs
 COPY --from=build /app/.next/standalone ./
 COPY --from=build /app/.next/static ./.next/static
 COPY --from=build /app/public ./public
+# Custom Prisma output (app/generated/prisma) is not traced by Next.js
+# standalone — copy it explicitly so the client and engine binary are present.
+COPY --from=build /app/app/generated/prisma ./app/generated/prisma
 
 USER nextjs
 EXPOSE 3000

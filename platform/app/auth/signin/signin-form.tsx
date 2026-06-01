@@ -75,11 +75,11 @@ export function SignInForm() {
       </div>
 
       {/* Form */}
-      <div style={{ flex: '1 1 48%', minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 32, overflowY: 'auto', position: 'relative' }}>
+      <div className="ws-formpanel" style={{ flex: '1 1 48%', minWidth: 0, padding: 32, overflowY: 'auto', position: 'relative' }}>
         <div style={{ position: 'absolute', top: 20, right: 20 }}>
           <ThemeToggle className="ws-btn" />
         </div>
-        <div style={{ width: 'min(380px, 100%)' }}>
+        <div style={{ width: 'min(380px, 100%)', margin: 'auto 0' }}>
           <div style={{ marginBottom: 26 }}>
             <h2 style={{ fontSize: 23, fontWeight: 800, letterSpacing: '-0.025em', color: 'var(--mb-ink)', margin: 0 }}>Sign in</h2>
             <p style={{ fontSize: 13, color: 'var(--mb-ink-muted)', marginTop: 6 }}>Use your MetricBase organization account.</p>

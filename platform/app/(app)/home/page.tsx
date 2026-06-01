@@ -117,8 +117,12 @@ export default async function HomePage() {
 
   const pinned: HomeData['pinned'] = apps.map((a) => ({ app: a.id, label: `${APP_LABEL[a.id]} overview`, kind: a.sub, href: a.href }))
 
+  const displayName = user.name || (user.email
+    ? user.email.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+    : 'there')
+
   const data: HomeData = {
-    userName: user.name || user.email || 'there',
+    userName: displayName,
     orgName: activeOrg.name,
     apps, kpis, activity, tasks, pinned,
     attention: assignedTasks.length + unreadNotifs,

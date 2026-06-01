@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { Hash, Plus, Send, Bot, UserPlus, Loader2, Menu, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { UserAvatar } from '@/components/ui/user-avatar'
 import toast from 'react-hot-toast'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -268,13 +269,12 @@ function MessageRow({ message, mine }: { message: Message; mine: boolean }) {
   const name = message.user.name ?? message.user.email
   return (
     <div style={{ display: 'flex', gap: 10, flexDirection: mine ? 'row-reverse' : 'row' }}>
-      {message.user.image ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={message.user.image} alt="" style={{ width: 30, height: 30, flexShrink: 0, borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--mb-border)' }} />
-      ) : (
-        <div style={{ width: 30, height: 30, flexShrink: 0, borderRadius: '50%', background: isAgent ? 'var(--mb-brand)' : 'var(--mb-surface-2, var(--mb-surface))', border: '1px solid var(--mb-border)', display: 'grid', placeItems: 'center', color: isAgent ? '#fff' : 'var(--mb-ink-soft)', fontSize: 12, fontWeight: 700 }}>
-          {isAgent ? <Bot className="h-4 w-4" /> : (name?.charAt(0).toUpperCase() ?? 'U')}
+      {isAgent ? (
+        <div style={{ width: 30, height: 30, flexShrink: 0, borderRadius: '50%', background: 'var(--mb-brand)', border: '1px solid var(--mb-border)', display: 'grid', placeItems: 'center', color: '#fff' }}>
+          <Bot className="h-4 w-4" />
         </div>
+      ) : (
+        <UserAvatar user={message.user} className="h-[30px] w-[30px]" />
       )}
       <div style={{ maxWidth: '70%', minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: mine ? 'flex-end' : 'flex-start', marginBottom: 2 }}>

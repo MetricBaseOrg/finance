@@ -7,6 +7,7 @@ import {
   Settings, Plus, Users, Flag, MoreHorizontal, TrendingUp, LayoutTemplate,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { UserAvatar } from '@/components/ui/user-avatar'
 import { Button } from '@/components/ui/button'
 import { KanbanBoard } from '@/components/tasks/kanban-board'
 import { TaskListView } from '@/components/tasks/task-list-view'
@@ -199,24 +200,11 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
             <div className="hidden sm:flex items-center gap-2">
               <div className="flex -space-x-2">
                 {project.workspace.members.slice(0, 4).map(m => (
-                  m.user.image ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
+                  <UserAvatar
                       key={m.id}
-                      src={m.user.image}
-                      alt={m.user.name || m.user.email || ''}
-                      title={m.user.name || m.user.email || ''}
-                      className="w-7 h-7 rounded-full border-2 border-white object-cover bg-indigo-100"
+                      user={m.user}
+                      className="w-7 h-7 border-2 border-white"
                     />
-                  ) : (
-                    <div
-                      key={m.id}
-                      className="w-7 h-7 rounded-full bg-indigo-100 border-2 border-white flex items-center justify-center text-xs font-semibold text-indigo-700"
-                      title={m.user.name || m.user.email || ''}
-                    >
-                      {(m.user.name || m.user.email || 'U')[0].toUpperCase()}
-                    </div>
-                  )
                 ))}
               </div>
               <span className="text-xs text-gray-3">{project.workspace.members.length} member{project.workspace.members.length !== 1 ? 's' : ''}</span>

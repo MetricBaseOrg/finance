@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { requireRole, isSoleOwner } from "@/server/workspace";
 import { db } from "@/server/db";
 import { Eyebrow } from "@/components/mb/Eyebrow";
@@ -118,17 +119,7 @@ export default async function MembersSettingsPage({
                 className="border-b border-line last:border-b-0 px-4 py-3 grid grid-cols-1 md:grid-cols-[1.6fr_1.2fr_220px] gap-2 md:items-center"
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  {m.user.image ? (
-                    <img
-                      src={m.user.image}
-                      alt={m.user.name ?? "Member avatar"}
-                      className="w-7 h-7 rounded-full object-cover shrink-0 border border-line"
-                    />
-                  ) : (
-                    <div className="w-7 h-7 rounded-full bg-surface shrink-0 border border-line flex items-center justify-center font-mono text-xs text-gray-3 uppercase">
-                      {(m.user.name || m.user.email || "U").charAt(0)}
-                    </div>
-                  )}
+                  <UserAvatar user={m.user} className="w-7 h-7" />
                   <span className="font-sans text-sm text-white truncate">
                     <Link href={`/u/${m.userId}`} className="hover:text-gold transition-colors">
                       {m.user.name ?? "—"}

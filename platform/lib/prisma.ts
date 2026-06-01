@@ -1,25 +1,10 @@
 import { PrismaClient } from '@/app/generated/prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
 
-// pg v9 / pg-connection-string v3 will change the meaning of sslmode
-// require/prefer/verify-ca. Today they're aliases for verify-full; pin that
-// explicitly so behaviour is unchanged and the deprecation warning is silenced.
-function pinSslMode(url?: string): string | undefined {
-  if (!url) return url
-  return url.replace(/([?&]sslmode=)(require|prefer|verify-ca)\b/i, '$1verify-full')
-}
-
-// Transaction reads that compute totals/lists must exclude non-POSTED entries
-// (PENDING awaiting approval, REJECTED). Centralised here via a client extension
-// so every aggregation is covered without scattering filters across the app.
-//   - Applies to: findMany, aggregate, groupBy, count
-//   - Skipped when the caller already specifies `status` (ledger, pending queue)
-//   - NOT applied to findFirst/findUnique (approve/edit must see PENDING)
 const FILTERED_TXN_OPS = new Set(["findMany", "aggregate", "groupBy", "count"])
 
 function createPrismaClient() {
-  const url = pinSslMode(process.env.DIRECT_URL || process.env.DATABASE_URL)
-  const adapter = new PrismaPg({ connectionString: url })
+  const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL })
   return new PrismaClient({ adapter }).$extends({
     query: {
       transaction: {

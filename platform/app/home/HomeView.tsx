@@ -72,7 +72,7 @@ export function HomeView({ data }: { data: HomeData }) {
             {/* left: apps + activity */}
             <div>
               <SectionHead eyebrow="Launch" title="Your apps" sub="Open any app — your session and access carry across" />
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--ws-gap)' }}>
+              <div className="ws-apps-grid">
                 {data.apps.map((a) => (
                   <a key={a.id} href={a.href} className="ws-card ws-click ws-lift"
                     style={{ padding: 'var(--ws-card-pad)', display: 'flex', flexDirection: 'column', gap: 13, borderTop: `2px solid var(--c-${a.id})`, minWidth: 0, textDecoration: 'none' }}>

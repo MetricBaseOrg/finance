@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { Prisma } from "@/app/generated/prisma/client";
 import { requireRole } from "@/server/workspace";
 import { db } from "@/server/db";
@@ -136,17 +137,7 @@ export default async function ActivityPage({
                 </span>
                 <span className="font-mono text-[11px] text-gold">{l.action}</span>
                 <div className="flex items-center gap-2 min-w-0">
-                  {l.actor?.image ? (
-                    <img
-                      src={l.actor.image}
-                      alt="Avatar"
-                      className="w-5 h-5 rounded-full object-cover shrink-0 border border-line"
-                    />
-                  ) : (
-                    <div className="w-5 h-5 rounded-full shrink-0 border border-line flex items-center justify-center font-mono text-[10px] text-gray-3 uppercase">
-                      {(l.actor?.name || l.actor?.email || "S").charAt(0)}
-                    </div>
-                  )}
+                  {l.actor && <UserAvatar user={l.actor} className="w-5 h-5" />}
                   <span className="font-mono text-xs text-gray-2 truncate">
                     {l.actor?.email ?? "system"}
                   </span>

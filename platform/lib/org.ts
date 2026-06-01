@@ -24,11 +24,17 @@ export type OrgSummary = {
 export async function requireUser(): Promise<SessionUser> {
   const session = await auth()
   if (!session?.user?.id) redirect('/auth/signin')
+  // Always read name/image from DB so stale JWTs (e.g. after OAuth link
+  // adds a Google profile photo) reflect the current row immediately.
+  const dbUser = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { name: true, image: true },
+  })
   return {
     id: session.user.id,
-    name: session.user.name ?? null,
+    name: dbUser?.name ?? session.user.name ?? null,
     email: session.user.email ?? '',
-    image: session.user.image ?? null,
+    image: dbUser?.image ?? session.user.image ?? null,
   }
 }
 
