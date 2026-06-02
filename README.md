@@ -9,11 +9,10 @@ The static editorial site and Blogger templates live in [`../MetricBase/`](../Me
 | Directory | Description | Production |
 | --- | --- | --- |
 | [`platform`](./platform/) | **Unified workspace** — Projects (ProBase), Finance, Field ops (FieldFlow), Team chat, and AI agents, scoped to a shared Organization. Multi-currency finance with a transaction approval workflow, project↔finance linking, field import/export/reports, and configurable AI agent members. Next.js 16 · Prisma 7 + Neon · Auth.js v5. See [`platform/README.md`](./platform/README.md). | [`apps.metricbase.org`](https://apps.metricbase.org) |
-| [`financial-tracker`](./financial-tracker/) | Original standalone finance tracker — multi-currency (IDR/USD), P&L + balance sheet, investments + dividends, recurring, invites, audit, CSV/PDF export. **Superseded by the Finance module in `platform`.** | — |
 
 ## Conventions
 
-- One project per directory, named in lowercase with hyphens (e.g. `financial-tracker`).
+- One project per directory, named in lowercase with hyphens (e.g. `field-reports`).
 - Each project owns its own `README.md` with local dev + deploy instructions.
 - Each project deploys as its own Vercel project with **root directory** set to `apps/<name>/`.
 - Each project owns its own subdomain under `apps.metricbase.org`, or shares the root if it is the primary app.
@@ -34,10 +33,10 @@ Deviate only with a reason.
 ## Adding a new app
 
 1. `cd apps && npx create-next-app@latest <name> --typescript --tailwind --app --src-dir --import-alias "@/*"`
-2. Port the MetricBase design tokens into `src/app/globals.css` (copy from `financial-tracker/src/app/globals.css`).
+2. Port the MetricBase design tokens into your global stylesheet (copy from `platform/app/globals.css`).
 3. Add the project to the table above.
 4. Create a Vercel project pointing at `apps/<name>/`, attach Neon, configure env vars, and add the subdomain.
-5. Reuse `financial-tracker/vercel.json` as the deploy template (build command + cron block).
+5. Add a `vercel.json` for the deploy config (build command + any cron block).
 
 ## Legal & brand
 
