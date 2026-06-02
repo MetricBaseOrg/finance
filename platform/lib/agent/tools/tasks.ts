@@ -40,6 +40,8 @@ const getTask: AgentTool = {
           take: 50,
         },
         subTasks: { select: { id: true, title: true, status: true } },
+        blockedBy: { include: { blocker: { select: { id: true, title: true, status: true } } } },
+        blocking:  { include: { blocked: { select: { id: true, title: true, status: true } } } },
       },
     })
     if (!t) return { error: 'Task not found.' }
@@ -49,10 +51,13 @@ const getTask: AgentTool = {
       description: t.description,
       status: t.status,
       priority: t.priority,
+      startDate: t.startDate,
       dueDate: t.dueDate,
       project: t.project,
       assignee: t.assignee?.name ?? t.assignee?.email ?? null,
       subTasks: t.subTasks,
+      blockedBy: t.blockedBy.map(d => ({ id: d.id, blocker: d.blocker })),
+      blocking:  t.blocking.map(d => ({ id: d.id, blocked: d.blocked })),
       comments: t.comments.map(c => ({
         author: c.user.name ?? c.user.email,
         createdAt: c.createdAt.toISOString(),
@@ -134,7 +139,7 @@ const updateTaskTool: AgentTool = {
   scope: 'tasks',
   definition: {
     name: 'update_task',
-    description: 'Change a task: status, priority, assignee, title, description, due date, or labels. Subject to the same rules a human of your role faces (e.g. blockers must be clear to mark DONE).',
+    description: 'Change a task: status, priority, assignee, title, description, start date, due date, or labels. Subject to the same rules a human of your role faces (e.g. blockers must be clear to mark DONE).',
     input_schema: {
       type: 'object',
       properties: {
@@ -144,7 +149,8 @@ const updateTaskTool: AgentTool = {
         assigneeId: { type: 'string', description: 'User id to assign to, or null to unassign.' },
         title: { type: 'string' },
         description: { type: 'string' },
-        dueDate: { type: 'string', description: 'ISO date, or null to clear.' },
+        startDate: { type: 'string', description: 'ISO datetime string for when the task starts, or null to clear.' },
+        dueDate: { type: 'string', description: 'ISO datetime string for the deadline, or null to clear.' },
       },
       required: ['taskId'],
     },
@@ -154,7 +160,7 @@ const updateTaskTool: AgentTool = {
     if (!(await taskInOrg(input.taskId, ctx.organizationId))) return { error: 'Task not found in this workspace.' }
     const { taskId, ...data } = input
     try {
-      const { task } = await updateTask({ taskId, actorUserId: ctx.agentUserId, role: ctx.agentRole, data })
+      const { task } = await updateTask({ taskId, actorUserId: ctx.agentUserId, role: ctx.agentRole, isAgent: true, data })
       return { ok: true, task: { id: task.id, title: task.title, status: task.status, priority: task.priority } }
     } catch (err) {
       if (err instanceof TaskUpdateError) return { error: err.code, message: err.message, ...(err.payload ?? {}) }
@@ -176,7 +182,8 @@ const createTask: AgentTool = {
         description: { type: 'string' },
         priority: { type: 'string', description: 'LOW, MEDIUM, HIGH, URGENT (default MEDIUM).' },
         assigneeId: { type: 'string', description: 'User id to assign to (optional).' },
-        dueDate: { type: 'string', description: 'ISO date (optional).' },
+        startDate: { type: 'string', description: 'ISO datetime string for when the task starts (optional).' },
+        dueDate: { type: 'string', description: 'ISO datetime string for the deadline (optional).' },
         parentId: { type: 'string', description: 'Parent task id to create this as a subtask (optional).' },
       },
       required: ['projectId', 'title'],
@@ -184,7 +191,7 @@ const createTask: AgentTool = {
   },
   async execute(ctx: ToolContext, input: {
     projectId: string; title: string; description?: string; priority?: string;
-    assigneeId?: string; dueDate?: string; parentId?: string
+    assigneeId?: string; startDate?: string; dueDate?: string; parentId?: string
   }) {
     if (!can(ctx.agentRole, 'task.create')) return { error: 'Your role does not permit creating tasks.' }
     const project = await prisma.project.findUnique({
@@ -214,6 +221,7 @@ const createTask: AgentTool = {
         description: input.description,
         status: 'TODO',
         priority: input.priority || 'MEDIUM',
+        startDate: input.startDate ? new Date(input.startDate) : undefined,
         dueDate: input.dueDate ? new Date(input.dueDate) : undefined,
         projectId: input.projectId,
         creatorId: ctx.agentUserId,
@@ -324,6 +332,83 @@ const summarizeThread: AgentTool = {
   },
 }
 
+const addDependency: AgentTool = {
+  scope: 'tasks',
+  definition: {
+    name: 'add_dependency',
+    description: 'Mark that one task must finish before another can start. blockerTaskId is the prerequisite; blockedTaskId is the task that depends on it. Works for both tasks and subtasks.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        blockerTaskId: { type: 'string', description: 'The task that must finish first (the blocker).' },
+        blockedTaskId: { type: 'string', description: 'The task that is waiting on the blocker.' },
+      },
+      required: ['blockerTaskId', 'blockedTaskId'],
+    },
+  },
+  async execute(ctx: ToolContext, input: { blockerTaskId: string; blockedTaskId: string }) {
+    if (!can(ctx.agentRole, 'dependency.manage')) return { error: 'Your role does not permit managing dependencies.' }
+    if (input.blockerTaskId === input.blockedTaskId) return { error: 'A task cannot depend on itself.' }
+    if (!(await taskInOrg(input.blockerTaskId, ctx.organizationId))) return { error: 'Blocker task not found in this workspace.' }
+    if (!(await taskInOrg(input.blockedTaskId, ctx.organizationId))) return { error: 'Blocked task not found in this workspace.' }
+
+    // Reject direct cycle: does blocked already block the blocker?
+    const cycle = await prisma.taskDependency.findFirst({
+      where: { blockerId: input.blockedTaskId, blockedId: input.blockerTaskId },
+      select: { id: true },
+    })
+    if (cycle) return { error: 'That would create a cycle — the blocked task already blocks the blocker.' }
+
+    try {
+      const dep = await prisma.taskDependency.create({
+        data: { blockerId: input.blockerTaskId, blockedId: input.blockedTaskId },
+        include: {
+          blocker: { select: { id: true, title: true } },
+          blocked: { select: { id: true, title: true } },
+        },
+      })
+      void logActivity({ taskId: input.blockedTaskId, userId: ctx.agentUserId, kind: 'comment.added',
+        metadata: { preview: `now blocked by "${dep.blocker.title}"`, depId: dep.id } as never })
+      void logActivity({ taskId: input.blockerTaskId, userId: ctx.agentUserId, kind: 'comment.added',
+        metadata: { preview: `now blocks "${dep.blocked.title}"`, depId: dep.id } as never })
+      return { ok: true, depId: dep.id, blocker: dep.blocker.title, blocked: dep.blocked.title }
+    } catch (err) {
+      if ((err as { code?: string })?.code === 'P2002') return { error: 'Dependency already exists.' }
+      throw err
+    }
+  },
+}
+
+const removeDependency: AgentTool = {
+  scope: 'tasks',
+  definition: {
+    name: 'remove_dependency',
+    description: 'Remove a dependency between two tasks. Use the blockerTaskId and blockedTaskId (the same pair you used to create it), or the depId returned by get_task.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        blockerTaskId: { type: 'string', description: 'The blocker task id.' },
+        blockedTaskId: { type: 'string', description: 'The blocked task id.' },
+      },
+      required: ['blockerTaskId', 'blockedTaskId'],
+    },
+  },
+  async execute(ctx: ToolContext, input: { blockerTaskId: string; blockedTaskId: string }) {
+    if (!can(ctx.agentRole, 'dependency.manage')) return { error: 'Your role does not permit managing dependencies.' }
+    if (!(await taskInOrg(input.blockerTaskId, ctx.organizationId))) return { error: 'Blocker task not found in this workspace.' }
+
+    const dep = await prisma.taskDependency.findFirst({
+      where: { blockerId: input.blockerTaskId, blockedId: input.blockedTaskId },
+      select: { id: true },
+    })
+    if (!dep) return { error: 'Dependency not found.' }
+
+    await prisma.taskDependency.delete({ where: { id: dep.id } })
+    return { ok: true }
+  },
+}
+
 export const taskTools: AgentTool[] = [
-  getTask, searchTasks, listProjects, updateTaskTool, createTask, postComment, breakDownTaskTool, summarizeThread,
+  getTask, searchTasks, listProjects, updateTaskTool, createTask, postComment,
+  breakDownTaskTool, summarizeThread, addDependency, removeDependency,
 ]

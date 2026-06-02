@@ -316,6 +316,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
         initialTask={selectedTaskId ? tasks.find(t => t.id === selectedTaskId) : undefined}
         userRole={myRole}
         currentUserId={currentUserId}
+        members={project?.workspace.members}
         onClose={() => setSelectedTaskId(null)}
         onUpdated={handleTaskUpdated}
         onDeleted={handleTaskDeleted}

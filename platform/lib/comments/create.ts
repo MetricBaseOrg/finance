@@ -29,27 +29,32 @@ export async function createComment(opts: {
   })
 
   const handles = extractMentionHandles(content)
-  if (handles.length > 0) {
-    const task = await prisma.task.findUnique({
-      where: { id: taskId },
-      select: {
-        title: true,
-        assigneeId: true,
-        project: {
-          select: {
-            workspace: {
-              select: {
-                members: {
-                  select: { user: { select: { id: true, name: true, email: true } } },
-                },
+
+  // Always fetch task context if we need to notify mentions or the assignee.
+  const task = await prisma.task.findUnique({
+    where: { id: taskId },
+    select: {
+      title: true,
+      assigneeId: true,
+      project: {
+        select: {
+          workspace: {
+            select: {
+              members: {
+                select: { user: { select: { id: true, name: true, email: true } } },
               },
             },
           },
         },
       },
-    })
-    const members = task?.project.workspace.members || []
-    const mentionedIds = resolveMentions(handles, members)
+    },
+  })
+
+  const members = task?.project.workspace.members || []
+  let mentionedIds: string[] = []
+
+  if (handles.length > 0) {
+    mentionedIds = resolveMentions(handles, members)
     if (mentionedIds.length > 0) {
       await notify({
         userIds: mentionedIds,
@@ -60,16 +65,18 @@ export async function createComment(opts: {
         metadata: { taskTitle: task?.title, preview: content.slice(0, 120) },
       })
     }
-    if (task?.assigneeId && task.assigneeId !== userId && !mentionedIds.includes(task.assigneeId)) {
-      await notify({
-        userIds: [task.assigneeId],
-        kind: 'comment.added',
-        actorId: userId,
-        taskId,
-        commentId: comment.id,
-        metadata: { taskTitle: task.title, preview: content.slice(0, 120) },
-      })
-    }
+  }
+
+  // Notify the assignee whenever someone else comments, regardless of mentions.
+  if (task?.assigneeId && task.assigneeId !== userId && !mentionedIds.includes(task.assigneeId)) {
+    await notify({
+      userIds: [task.assigneeId],
+      kind: 'comment.added',
+      actorId: userId,
+      taskId,
+      commentId: comment.id,
+      metadata: { taskTitle: task.title, preview: content.slice(0, 120) },
+    })
   }
 
   return comment

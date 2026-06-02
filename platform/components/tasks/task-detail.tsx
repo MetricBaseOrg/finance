@@ -63,6 +63,12 @@ interface Task {
   recurringFromId?: string | null
 }
 
+interface WorkspaceMember {
+  id: string
+  role: string
+  user: { id: string; name?: string | null; email?: string | null; image?: string | null }
+}
+
 interface TaskDetailProps {
   taskId: string | null
   // Optional parent-known task object — used as initial state to avoid a race
@@ -71,6 +77,8 @@ interface TaskDetailProps {
   initialTask?: any
   userRole?: string | null
   currentUserId?: string | null
+  /** Workspace members for the assignee picker. If omitted the component fetches them. */
+  members?: WorkspaceMember[]
   onClose: () => void
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onUpdated: (task: any) => void
@@ -87,9 +95,10 @@ const CLIENT_AUTHORITATIVE_FIELDS = [
   'status', 'priority', 'order', 'dueDate', 'startDate', 'assignee', 'assigneeId',
 ] as const
 
-export function TaskDetail({ taskId, initialTask, userRole, currentUserId, onClose, onUpdated, onDeleted, onTaskCreated }: TaskDetailProps) {
+export function TaskDetail({ taskId, initialTask, userRole, currentUserId, members: membersProp, onClose, onUpdated, onDeleted, onTaskCreated }: TaskDetailProps) {
   const [task, setTask] = useState<Task | null>(initialTask && initialTask.id === taskId ? initialTask : null)
   const [loading, setLoading] = useState(false)
+  const [workspaceMembers, setWorkspaceMembers] = useState<WorkspaceMember[]>(membersProp ?? [])
   const [editingTitle, setEditingTitle] = useState(false)
   const [titleValue, setTitleValue] = useState(initialTask?.title ?? '')
   const [editingDesc, setEditingDesc] = useState(false)
@@ -168,6 +177,14 @@ export function TaskDetail({ taskId, initialTask, userRole, currentUserId, onClo
         setTitleValue(prev => (prev && prev !== (initialTask?.title || '')) ? prev : data.title)
         setDescValue(prev => (prev && prev !== (initialTask?.description || '')) ? prev : (data.description || ''))
         setLoading(false)
+
+        // Fetch workspace members for the assignee picker if not passed by parent.
+        if (!membersProp && data.project?.id) {
+          fetch(`/api/projects/${data.project.id}`, { cache: 'no-store' })
+            .then(r => r.json())
+            .then(proj => setWorkspaceMembers(proj.workspace?.members ?? []))
+            .catch(() => {})
+        }
       })
       .catch(() => setLoading(false))
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -501,6 +518,42 @@ export function TaskDetail({ taskId, initialTask, userRole, currentUserId, onClo
                     </SelectContent>
                   </Select>
                 </div>
+
+                {workspaceMembers.length > 0 && (
+                  <div>
+                    <label className="block text-xs font-medium text-gray-3 mb-1.5">Assignee</label>
+                    <Select
+                      value={task.assignee?.id ?? 'none'}
+                      onValueChange={v => {
+                        const assigneeId = v === 'none' ? null : v
+                        const member = workspaceMembers.find(m => m.user.id === assigneeId)
+                        setTask(prev => prev ? { ...prev, assignee: member ? member.user : null } : null)
+                        update({ assigneeId } as never)
+                      }}
+                      disabled={userRole === 'VIEWER'}
+                    >
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue placeholder="Unassigned">
+                          {task.assignee
+                            ? (task.assignee.name || task.assignee.email || 'Assigned')
+                            : 'Unassigned'}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Unassigned</SelectItem>
+                        {workspaceMembers.map(m => (
+                          <SelectItem
+                            key={m.user.id}
+                            value={m.user.id}
+                            disabled={userRole === 'MEMBER' && m.user.id !== currentUserId}
+                          >
+                            {m.user.name || m.user.email}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
 
               {/* Dates */}

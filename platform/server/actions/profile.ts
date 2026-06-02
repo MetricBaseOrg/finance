@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import bcrypt from "bcryptjs";
 import { db } from "@/server/db";
 import { requireUser } from "@/server/workspace";
 import { profileUpdateSchema } from "@/lib/schemas";
@@ -39,4 +40,35 @@ export async function updateProfile(
   revalidatePath("/settings");
   revalidatePath(`/u/${user.id}`);
   return { ok: true, name: parsed.data.name, image };
+}
+
+export type ChangePasswordState = { error?: string; ok?: boolean };
+
+/** Set or change the signed-in user's password. */
+export async function changePassword(
+  _prev: ChangePasswordState | undefined,
+  formData: FormData,
+): Promise<ChangePasswordState> {
+  const user = await requireUser();
+
+  const current = (formData.get("current") as string | null) ?? "";
+  const next = (formData.get("next") as string | null) ?? "";
+  const confirm = (formData.get("confirm") as string | null) ?? "";
+
+  if (next.length < 8) return { error: "New password must be at least 8 characters." };
+  if (next !== confirm) return { error: "Passwords do not match." };
+
+  const row = await db.user.findUnique({ where: { id: user.id }, select: { password: true } });
+
+  // If they already have a password, verify the current one before allowing change.
+  if (row?.password) {
+    if (!current) return { error: "Current password is required." };
+    const ok = await bcrypt.compare(current, row.password);
+    if (!ok) return { error: "Current password is incorrect." };
+  }
+
+  const hashed = await bcrypt.hash(next, 12);
+  await db.user.update({ where: { id: user.id }, data: { password: hashed } });
+
+  return { ok: true };
 }

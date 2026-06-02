@@ -4,8 +4,11 @@ import { useEffect, useState } from 'react'
 import { Btn, wsField, WsLabel } from '@/app/home/ui'
 import {
   SOURCES, sourcesFor, WIDGET_TYPES, newWidgetId, flattenNumbers,
-  type Widget, type WidgetType,
+  type Widget, type WidgetType, type PillMode,
 } from '@/lib/field/widgets'
+
+// Chart types that plot a single primary metric (offer a "value field" override).
+const SINGLE_METRIC_CHARTS: WidgetType[] = ['line', 'bar', 'pie', 'area', 'multi-line', 'stacked-bar']
 
 const selectStyle = { ...wsField, appearance: 'auto' as const }
 
@@ -35,6 +38,12 @@ export function WidgetForm({ initial, onSave, onCancel }: {
   const [title, setTitle] = useState(initial?.title ?? '')
   const [source, setSource] = useState<string | undefined>(initial?.source)
   const [metric, setMetric] = useState<string>(initial?.metric ?? '')
+  const [metric2, setMetric2] = useState<string>(initial?.metric2 ?? '')
+  const [series1Kind, setSeries1Kind] = useState<'line' | 'bar'>(initial?.series1Kind ?? 'bar')
+  const [series2Kind, setSeries2Kind] = useState<'line' | 'bar'>(initial?.series2Kind ?? 'line')
+  const [pillMode, setPillMode] = useState<PillMode>(initial?.pillMode ?? 'difference')
+  const [pillFormula, setPillFormula] = useState(initial?.pillFormula ?? '')
+  const [pillUnit, setPillUnit] = useState(initial?.pillUnit ?? '')
   const [formula, setFormula] = useState(initial?.formula ?? '')
   const [unit, setUnit] = useState(initial?.unit ?? '')
   const [w, setW] = useState<Widget['w']>(initial?.w ?? (initial?.type === 'kpi' ? 1 : 2))
@@ -65,7 +74,21 @@ export function WidgetForm({ initial, onSave, onCancel }: {
     else {
       base.source = source
       if (metric) base.metric = metric
-      if (type === 'kpi') base.unit = unit.trim() || undefined
+      if (type === 'kpi') {
+        base.unit = unit.trim() || undefined
+        if (metric2) {
+          base.metric2 = metric2
+          base.pillMode = pillMode
+          if (pillMode === 'formula') base.pillFormula = pillFormula.trim()
+          if (pillUnit.trim()) base.pillUnit = pillUnit.trim()
+        }
+      }
+      if (type === 'combo') {
+        if (metric2) base.metric2 = metric2
+        base.series1Kind = series1Kind
+        base.series2Kind = series2Kind
+      }
+      if (type === 'scatter' && metric2) base.metric2 = metric2
     }
     onSave(base)
   }
@@ -123,12 +146,95 @@ export function WidgetForm({ initial, onSave, onCancel }: {
             </label>
           )}
 
-          {(type === 'line' || type === 'bar' || type === 'pie') && (
+          {type === 'kpi' && (
+            <label style={{ display: 'grid', gap: 5 }}>
+              <WsLabel>Comparison metric (optional)</WsLabel>
+              <select style={selectStyle} value={metric2} onChange={(e) => setMetric2(e.target.value)}>
+                <option value="">None — no pill</option>
+                {kpiKeys.map((k) => <option key={k} value={k}>{k.replace(/_/g, ' ')}</option>)}
+              </select>
+              <span style={{ fontSize: 11, color: 'var(--mb-ink-muted)' }}>Shows a pill comparing the primary metric (a) to this one (b).</span>
+            </label>
+          )}
+
+          {type === 'kpi' && metric2 && (
+            <>
+              <label style={{ display: 'grid', gap: 5 }}>
+                <WsLabel>Pill shows</WsLabel>
+                <select style={selectStyle} value={pillMode} onChange={(e) => setPillMode(e.target.value as PillMode)}>
+                  <option value="difference">Difference (a − b)</option>
+                  <option value="ratio">Ratio (a ÷ b, %)</option>
+                  <option value="pctchange">% change ((a − b) ÷ b)</option>
+                  <option value="raw">Raw value (b)</option>
+                  <option value="formula">Custom formula</option>
+                </select>
+              </label>
+              {pillMode === 'formula' && (
+                <label style={{ display: 'grid', gap: 5 }}>
+                  <WsLabel>Pill formula</WsLabel>
+                  <input className="mb-num" style={wsField} value={pillFormula} onChange={(e) => setPillFormula(e.target.value)} placeholder="(a - b) / b * 100" />
+                  <span style={{ fontSize: 11, color: 'var(--mb-ink-muted)' }}>Use <code>a</code> (primary) and <code>b</code> (comparison) with + − × ÷ and ( ).</span>
+                </label>
+              )}
+              {pillMode !== 'ratio' && pillMode !== 'pctchange' && (
+                <label style={{ display: 'grid', gap: 5 }}>
+                  <WsLabel>Pill unit (optional)</WsLabel>
+                  <input style={wsField} value={pillUnit} onChange={(e) => setPillUnit(e.target.value)} placeholder="bbl, %, …" />
+                </label>
+              )}
+            </>
+          )}
+
+          {SINGLE_METRIC_CHARTS.includes(type) && (
             <label style={{ display: 'grid', gap: 5 }}>
               <WsLabel>Value field (optional)</WsLabel>
               <input className="mb-num" style={wsField} value={metric} onChange={(e) => setMetric(e.target.value)} placeholder="auto-detect" />
-              <span style={{ fontSize: 11, color: 'var(--mb-ink-muted)' }}>Leave blank to auto-pick the first numeric field.</span>
+              <span style={{ fontSize: 11, color: 'var(--mb-ink-muted)' }}>
+                {type === 'multi-line' || type === 'stacked-bar'
+                  ? 'Sets the first/primary series; remaining numeric fields are plotted automatically.'
+                  : 'Leave blank to auto-pick the first numeric field.'}
+              </span>
             </label>
+          )}
+
+          {type === 'combo' && (
+            <>
+              <label style={{ display: 'grid', gap: 5 }}>
+                <WsLabel>Left-axis field (optional)</WsLabel>
+                <input className="mb-num" style={wsField} value={metric} onChange={(e) => setMetric(e.target.value)} placeholder="auto (first numeric)" />
+              </label>
+              <label style={{ display: 'grid', gap: 5 }}>
+                <WsLabel>Left-axis style</WsLabel>
+                <select style={selectStyle} value={series1Kind} onChange={(e) => setSeries1Kind(e.target.value as 'line' | 'bar')}>
+                  <option value="bar">Bar</option>
+                  <option value="line">Line</option>
+                </select>
+              </label>
+              <label style={{ display: 'grid', gap: 5 }}>
+                <WsLabel>Right-axis field (optional)</WsLabel>
+                <input className="mb-num" style={wsField} value={metric2} onChange={(e) => setMetric2(e.target.value)} placeholder="auto (second numeric)" />
+              </label>
+              <label style={{ display: 'grid', gap: 5 }}>
+                <WsLabel>Right-axis style</WsLabel>
+                <select style={selectStyle} value={series2Kind} onChange={(e) => setSeries2Kind(e.target.value as 'line' | 'bar')}>
+                  <option value="line">Line</option>
+                  <option value="bar">Bar</option>
+                </select>
+              </label>
+            </>
+          )}
+
+          {type === 'scatter' && (
+            <>
+              <label style={{ display: 'grid', gap: 5 }}>
+                <WsLabel>X field (optional)</WsLabel>
+                <input className="mb-num" style={wsField} value={metric} onChange={(e) => setMetric(e.target.value)} placeholder="auto (first numeric)" />
+              </label>
+              <label style={{ display: 'grid', gap: 5 }}>
+                <WsLabel>Y field (optional)</WsLabel>
+                <input className="mb-num" style={wsField} value={metric2} onChange={(e) => setMetric2(e.target.value)} placeholder="auto (second numeric)" />
+              </label>
+            </>
           )}
 
           {type === 'kpi' && (

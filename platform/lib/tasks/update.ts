@@ -46,9 +46,11 @@ export async function updateTask(opts: {
   taskId: string
   actorUserId: string
   role: Role
+  /** Pass true when the actor is an AI agent — bypasses the self-assign restriction. */
+  isAgent?: boolean
   data: TaskUpdateInput
 }) {
-  const { taskId: id, actorUserId: userId, role, data } = opts
+  const { taskId: id, actorUserId: userId, role, isAgent = false, data } = opts
 
   // Snapshot the pre-update state so we can diff for the activity log.
   const before = await prisma.task.findUnique({
@@ -73,8 +75,8 @@ export async function updateTask(opts: {
     }
   }
 
-  // ── Guard: Members can only assign tasks to themselves ─────────────────────
-  if (data.assigneeId !== undefined && role === 'MEMBER') {
+  // ── Guard: Members can only assign tasks to themselves (agents are exempt) ──
+  if (data.assigneeId !== undefined && role === 'MEMBER' && !isAgent) {
     if (data.assigneeId !== null && data.assigneeId !== userId) {
       throw new TaskUpdateError(
         403,

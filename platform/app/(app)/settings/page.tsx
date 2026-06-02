@@ -3,6 +3,7 @@ import { db } from '@/server/db'
 import { SettingsView } from './SettingsView'
 import { ProfileForm } from './ProfileForm'
 import { TelegramConnect } from './TelegramConnect'
+import { ChangePasswordForm } from './ChangePasswordForm'
 
 export const dynamic = 'force-dynamic'
 
@@ -11,7 +12,7 @@ export default async function SettingsPage() {
   const profile = await db.user.findUnique({
     where: { id: user.id },
     select: {
-      name: true, email: true, title: true, bio: true, image: true,
+      name: true, email: true, title: true, bio: true, image: true, password: true,
       telegramUserId: true, telegramUsername: true, telegramLinkedAt: true,
     },
   })
@@ -45,6 +46,7 @@ export default async function SettingsPage() {
           }}
         />
       }
+      changePasswordForm={<ChangePasswordForm hasPassword={!!profile?.password} />}
     />
   )
 }

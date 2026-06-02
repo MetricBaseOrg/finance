@@ -1,12 +1,23 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useState } from 'react'
 import {
   ResponsiveContainer, LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
-  XAxis, YAxis, CartesianGrid, Tooltip,
+  AreaChart, Area, ComposedChart, ScatterChart, Scatter,
+  XAxis, YAxis, ZAxis, CartesianGrid, Tooltip, Legend,
 } from 'recharts'
 import { KTile } from '@/app/home/ui'
-import { SOURCES, asNumber, flattenNumbers, fmtNum, inferFields, type Widget } from '@/lib/field/widgets'
+import {
+  SOURCES, asNumber, buildSourceUrl, computePill, flattenNumbers, fmtNum, inferFields, resolveRange,
+  type DashboardRange, type Widget,
+} from '@/lib/field/widgets'
+
+// The active dashboard time range, provided by the builder; widgets read it to
+// build their data URLs. null → each source uses its own default window.
+const RangeContext = createContext<DashboardRange | null>(null)
+export function DashboardRangeProvider({ range, children }: { range: DashboardRange | null; children: React.ReactNode }) {
+  return <RangeContext.Provider value={range}>{children}</RangeContext.Provider>
+}
 
 const TEAL = 'var(--c-fieldflow)'
 const PIE_COLORS = ['var(--c-fieldflow)', '#6aa9c9', '#c9a84c', '#8a9bb5', '#5fb8a3', '#b5826a', '#7a6fb0']
@@ -56,11 +67,13 @@ function Note({ children }: { children: React.ReactNode }) {
 
 const tooltipStyle = { background: 'var(--mb-surface)', border: '1px solid var(--mb-border)', borderRadius: 8, fontSize: 12 }
 const axisTick = { fill: 'var(--mb-ink-soft)', fontSize: 11 }
+const legendStyle = { fontSize: 11 }
 
 // ── KPI ──────────────────────────────────────────────────────────────────────
 function KpiWidget({ widget }: { widget: Widget }) {
+  const range = useContext(RangeContext)
   const src = widget.source ? SOURCES[widget.source] : null
-  const state = useSource(src?.url ?? null, 0)
+  const state = useSource(src ? buildSourceUrl(src, range) : null, 0)
   if (state.kind === 'loading') return <Note>Loading…</Note>
   if (state.kind === 'offline') return <Note>Compute engine offline</Note>
   if (state.kind !== 'object') return <Note>This source has no KPI values</Note>
@@ -70,17 +83,34 @@ function KpiWidget({ widget }: { widget: Widget }) {
 
   const picked = widget.metric ? entries.find(([k]) => k === widget.metric) : entries[0]
   if (!picked) return <Note>Metric “{widget.metric}” not found</Note>
-  return <KTile label={picked[0]} value={fmtNum(picked[1])} unit={widget.unit} accent={TEAL} />
+
+  // Optional secondary-metric comparison pill (reuses KTile's delta+tone slot).
+  const sec = widget.metric2 ? entries.find(([k]) => k === widget.metric2) : null
+  const pill = sec ? computePill(widget, picked[1], sec[1]) : null
+
+  return (
+    <KTile
+      label={picked[0]}
+      value={fmtNum(picked[1])}
+      unit={widget.unit}
+      delta={pill?.text}
+      tone={pill?.tone ?? 'neutral'}
+      accent={TEAL}
+    />
+  )
 }
 
 // ── Formula ───────────────────────────────────────────────────────────────────
 function FormulaWidget({ widget }: { widget: Widget }) {
+  const range = useContext(RangeContext)
   const [state, setState] = useState<{ k: 'loading' | 'offline' | 'ok' | 'err'; v?: number; m?: string }>({ k: 'loading' })
   useEffect(() => {
     let alive = true
     const expr = (widget.formula ?? '').trim()
     if (!expr) { setState({ k: 'err', m: 'No expression set' }); return }
-    fetch('/api/field/formula-eval', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ expr }) })
+    const body: Record<string, string> = { expr }
+    if (range) { const { from, to } = resolveRange(range); body.date_from = from; body.date_to = to }
+    fetch('/api/field/formula-eval', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
       .then(async (r) => {
         if (!alive) return
         if (r.status === 503) { setState({ k: 'offline' }); return }
@@ -91,7 +121,7 @@ function FormulaWidget({ widget }: { widget: Widget }) {
         setState({ k: 'ok', v })
       }).catch(() => { if (alive) setState({ k: 'offline' }) })
     return () => { alive = false }
-  }, [widget.formula])
+  }, [widget.formula, range])
   if (state.k === 'loading') return <Note>Evaluating…</Note>
   if (state.k === 'offline') return <Note>Compute engine offline</Note>
   if (state.k === 'err') return <Note>{state.m}</Note>
@@ -110,8 +140,9 @@ function rowsFromState(state: FetchState): Record<string, unknown>[] | null {
 }
 
 function ChartWidget({ widget }: { widget: Widget }) {
+  const range = useContext(RangeContext)
   const src = widget.source ? SOURCES[widget.source] : null
-  const state = useSource(src?.url ?? null, 0)
+  const state = useSource(src ? buildSourceUrl(src, range) : null, 0)
   if (state.kind === 'loading') return <Note>Loading…</Note>
   if (state.kind === 'offline') return <Note>Compute engine offline</Note>
   if (state.kind === 'error') return <Note>{state.message}</Note>
@@ -121,7 +152,14 @@ function ChartWidget({ widget }: { widget: Widget }) {
   const { x, ys } = inferFields(rows)
   const y = widget.metric && ys.includes(widget.metric) ? widget.metric : ys[0]
   if (!x || !y) return <Note>Couldn’t infer chart fields</Note>
-  const data = rows.map((r) => ({ ...r, [y]: asNumber(r[y]) ?? 0 }))
+  // Coerce every numeric field so multi-series / dual-axis charts plot cleanly.
+  const data = rows.map((r) => {
+    const o: Record<string, unknown> = { ...r }
+    for (const k of ys) o[k] = asNumber(r[k]) ?? 0
+    return o
+  })
+  // Secondary field for combo (right axis) / scatter (Y axis).
+  const y2 = widget.metric2 && ys.includes(widget.metric2) ? widget.metric2 : ys.find((k) => k !== y)
 
   if (widget.type === 'pie') {
     const pieData = data.map((r) => ({ name: String(r[x] ?? ''), value: asNumber(r[y]) ?? 0 })).filter((d) => d.value > 0)
@@ -152,6 +190,104 @@ function ChartWidget({ widget }: { widget: Widget }) {
     )
   }
 
+  if (widget.type === 'area') {
+    return (
+      <ResponsiveContainer width="100%" height="100%">
+        <AreaChart data={data} margin={{ top: 8, right: 12, bottom: 4, left: 4 }}>
+          <defs>
+            <linearGradient id={`area-${widget.id}`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={TEAL} stopOpacity={0.35} />
+              <stop offset="100%" stopColor={TEAL} stopOpacity={0.02} />
+            </linearGradient>
+          </defs>
+          <CartesianGrid stroke="var(--mb-divider)" vertical={false} />
+          <XAxis dataKey={x} tick={axisTick} minTickGap={32} />
+          <YAxis tick={axisTick} width={52} />
+          <Tooltip contentStyle={tooltipStyle} />
+          <Area type="monotone" dataKey={y} stroke={TEAL} strokeWidth={2} fill={`url(#area-${widget.id})`} />
+        </AreaChart>
+      </ResponsiveContainer>
+    )
+  }
+
+  if (widget.type === 'multi-line') {
+    const series = ys.slice(0, 5)
+    return (
+      <ResponsiveContainer width="100%" height="100%">
+        <LineChart data={data} margin={{ top: 8, right: 12, bottom: 4, left: 4 }}>
+          <CartesianGrid stroke="var(--mb-divider)" vertical={false} />
+          <XAxis dataKey={x} tick={axisTick} minTickGap={32} />
+          <YAxis tick={axisTick} width={52} />
+          <Tooltip contentStyle={tooltipStyle} />
+          <Legend wrapperStyle={legendStyle} />
+          {series.map((k, i) => (
+            <Line key={k} type="monotone" dataKey={k} stroke={PIE_COLORS[i % PIE_COLORS.length]} strokeWidth={2} dot={false} />
+          ))}
+        </LineChart>
+      </ResponsiveContainer>
+    )
+  }
+
+  if (widget.type === 'stacked-bar') {
+    const series = ys.slice(0, 5)
+    return (
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart data={data} margin={{ top: 8, right: 12, bottom: 4, left: 4 }}>
+          <CartesianGrid stroke="var(--mb-divider)" vertical={false} />
+          <XAxis dataKey={x} tick={axisTick} minTickGap={20} />
+          <YAxis tick={axisTick} width={52} />
+          <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'var(--mb-divider)' }} />
+          <Legend wrapperStyle={legendStyle} />
+          {series.map((k, i) => (
+            <Bar key={k} dataKey={k} stackId="s" fill={PIE_COLORS[i % PIE_COLORS.length]} />
+          ))}
+        </BarChart>
+      </ResponsiveContainer>
+    )
+  }
+
+  if (widget.type === 'scatter') {
+    const xKey = widget.metric && ys.includes(widget.metric) ? widget.metric : ys[0]
+    const yKey = widget.metric2 && ys.includes(widget.metric2) ? widget.metric2 : ys.find((k) => k !== xKey)
+    if (!yKey) return <Note>Scatter needs two numeric fields</Note>
+    return (
+      <ResponsiveContainer width="100%" height="100%">
+        <ScatterChart margin={{ top: 8, right: 12, bottom: 8, left: 4 }}>
+          <CartesianGrid stroke="var(--mb-divider)" />
+          <XAxis type="number" dataKey={xKey} name={xKey} tick={axisTick} width={52} />
+          <YAxis type="number" dataKey={yKey} name={yKey} tick={axisTick} width={52} />
+          <ZAxis range={[40, 40]} />
+          <Tooltip contentStyle={tooltipStyle} cursor={{ strokeDasharray: '3 3' }} />
+          <Scatter data={data} fill={TEAL} />
+        </ScatterChart>
+      </ResponsiveContainer>
+    )
+  }
+
+  if (widget.type === 'combo') {
+    if (!y2) return <Note>Combo needs two numeric fields</Note>
+    const k1 = widget.series1Kind ?? 'bar'
+    const k2 = widget.series2Kind ?? 'line'
+    return (
+      <ResponsiveContainer width="100%" height="100%">
+        <ComposedChart data={data} margin={{ top: 8, right: 12, bottom: 4, left: 4 }}>
+          <CartesianGrid stroke="var(--mb-divider)" vertical={false} />
+          <XAxis dataKey={x} tick={axisTick} minTickGap={20} />
+          <YAxis yAxisId="left" tick={axisTick} width={52} />
+          <YAxis yAxisId="right" orientation="right" tick={axisTick} width={52} />
+          <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'var(--mb-divider)' }} />
+          <Legend wrapperStyle={legendStyle} />
+          {k1 === 'bar'
+            ? <Bar yAxisId="left" dataKey={y} fill={TEAL} radius={[2, 2, 0, 0]} />
+            : <Line yAxisId="left" type="monotone" dataKey={y} stroke={TEAL} strokeWidth={2} dot={false} />}
+          {k2 === 'bar'
+            ? <Bar yAxisId="right" dataKey={y2} fill={PIE_COLORS[1]} radius={[2, 2, 0, 0]} />
+            : <Line yAxisId="right" type="monotone" dataKey={y2} stroke={PIE_COLORS[1]} strokeWidth={2} dot={false} />}
+        </ComposedChart>
+      </ResponsiveContainer>
+    )
+  }
+
   // line (default)
   return (
     <ResponsiveContainer width="100%" height="100%">
@@ -167,8 +303,9 @@ function ChartWidget({ widget }: { widget: Widget }) {
 }
 
 function TableWidget({ widget }: { widget: Widget }) {
+  const range = useContext(RangeContext)
   const src = widget.source ? SOURCES[widget.source] : null
-  const state = useSource(src?.url ?? null, 0)
+  const state = useSource(src ? buildSourceUrl(src, range) : null, 0)
   if (state.kind === 'loading') return <Note>Loading…</Note>
   if (state.kind === 'offline') return <Note>Compute engine offline</Note>
   if (state.kind === 'error') return <Note>{state.message}</Note>
@@ -205,5 +342,5 @@ export function WidgetBody({ widget }: { widget: Widget }) {
 
 // Tiles (kpi/formula) render their own card; charts/tables need a sized box.
 export function widgetNeedsChartHeight(type: Widget['type']): boolean {
-  return type === 'line' || type === 'bar' || type === 'pie'
+  return type !== 'kpi' && type !== 'formula' && type !== 'table'
 }

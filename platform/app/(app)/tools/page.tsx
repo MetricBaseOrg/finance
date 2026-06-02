@@ -4,18 +4,18 @@ import { useState } from 'react'
 import { Panel, SectionHead, Icon, Btn } from '@/app/home/ui'
 
 const TOOLS: [string, string, string, string, boolean][] = [
-  ['mud', 'Mud weight ↔ SG', 'calc', 'Convert mud density across ppg, SG, lb/ft³ and gradient.', true],
-  ['hydro', 'Hydrostatic pressure', 'drop', 'Bottom-hole pressure from mud weight and TVD.', true],
-  ['api', 'API gravity', 'chart', 'API ↔ specific gravity at 60°F, with classification.', true],
-  ['conv', 'Volume converter', 'tank', 'Barrels, m³, gallons and litres — instant.', true],
-  ['gas', 'Gas FVF (Bg)', 'bolt', 'Gas formation volume factor from P, T and z.', false],
-  ['prod', 'Production decline', 'arrowdn', 'Arps decline — qi, Di and rate forecast.', false],
-  ['kill', 'Kill sheet', 'shield', 'Kill mud weight and circulating pressures.', false],
-  ['torque', 'Torque & drag', 'settings', 'String tension and torque modelling.', false],
+  ['mud',    'Mud weight ↔ SG',      'calc',    'Convert mud density across ppg, SG, lb/ft³ and gradient.', true],
+  ['hydro',  'Hydrostatic pressure',  'drop',    'Bottom-hole pressure from mud weight and TVD.',            true],
+  ['api',    'API gravity',           'chart',   'API ↔ specific gravity at 60°F, with classification.',    true],
+  ['conv',   'Volume converter',      'tank',    'Barrels, m³, gallons and litres — pick your input unit.', true],
+  ['gas',    'Gas FVF (Bg)',          'bolt',    'Gas formation volume factor from P, T and z.',             true],
+  ['prod',   'Production decline',    'arrowdn', 'Arps exponential decline — qi, Di and rate forecast.',    true],
+  ['kill',   'Kill sheet',            'shield',  'Kill mud weight and circulating pressures.',               true],
+  ['torque', 'Torque & drag',         'settings','String tension, hook loads and rotary torque.',           true],
 ]
 
 const num = (v: number, d = 2) =>
-  isFinite(v) ? Number(v).toLocaleString('en-US', { maximumFractionDigits: d, minimumFractionDigits: d }) : '—'
+  isFinite(v) && !isNaN(v) ? Number(v).toLocaleString('en-US', { maximumFractionDigits: d, minimumFractionDigits: d }) : '—'
 
 function NumInput({ label, unit, value, onChange }: { label: string; unit: string; value: number; onChange: (v: number) => void }) {
   return (
@@ -50,6 +50,8 @@ function Formula({ children }: { children: React.ReactNode }) {
   return <div style={{ fontSize: 10.5, color: 'var(--mb-ink-soft)', fontFamily: 'var(--mb-font-mono)', marginTop: 12 }}>{children}</div>
 }
 
+// ─── Calculators ────────────────────────────────────────────────────────────
+
 function CalcHydro() {
   const [mw, setMw] = useState(9.6)
   const [tvd, setTvd] = useState(8200)
@@ -65,6 +67,7 @@ function CalcHydro() {
     </Panel>
   )
 }
+
 function CalcMud() {
   const [ppg, setPpg] = useState(10.0)
   return (
@@ -75,6 +78,7 @@ function CalcMud() {
     </Panel>
   )
 }
+
 function CalcApi() {
   const [api, setApi] = useState(35)
   const sg = 141.5 / (131.5 + api)
@@ -87,16 +91,156 @@ function CalcApi() {
     </Panel>
   )
 }
+
+// Volume conversion factors to bbl
+const VOL_UNITS = ['bbl', 'm³', 'gal', 'L'] as const
+type VolUnit = typeof VOL_UNITS[number]
+const TO_BBL: Record<VolUnit, number> = { bbl: 1, 'm³': 6.28981, gal: 1 / 42, L: 1 / 158.987 }
+const UNIT_LABELS: Record<VolUnit, string> = { bbl: 'Barrels', 'm³': 'Cubic metres', gal: 'US gallons', L: 'Litres' }
+
 function CalcConv() {
-  const [bbl, setBbl] = useState(1000)
+  const [fromUnit, setFromUnit] = useState<VolUnit>('bbl')
+  const [value, setValue] = useState(1000)
+
+  const inBbl = value * TO_BBL[fromUnit]
+  const others = VOL_UNITS.filter((u) => u !== fromUnit)
+
   return (
     <Panel pad={18}>
-      <div style={{ marginBottom: 16 }}><NumInput label="Volume" unit="bbl" value={bbl} onChange={setBbl} /></div>
-      <ResultBig rows={[['Cubic metres', num(bbl * 0.158987, 2), 'm³'], ['US gallons', num(bbl * 42, 0), 'gal'], ['Litres', num(bbl * 158.987, 0), 'L']]} />
-      <Formula>1 bbl = 0.158987 m³ = 42 gal</Formula>
+      {/* Unit picker */}
+      <div style={{ marginBottom: 14 }}>
+        <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--mb-ink-2)', marginBottom: 8 }}>Input unit</div>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {VOL_UNITS.map((u) => (
+            <button key={u} onClick={() => setFromUnit(u)} className="ws-btn"
+              style={{ padding: '6px 14px', borderRadius: 20, border: u === fromUnit ? '1.5px solid var(--mb-brand)' : '1px solid var(--mb-border)', background: u === fromUnit ? 'var(--mb-brand-soft)' : 'var(--mb-surface-2)', color: u === fromUnit ? 'var(--mb-brand-ink)' : 'var(--mb-ink-soft)', fontSize: 12, fontWeight: 600, fontFamily: 'var(--mb-font-mono)', cursor: 'pointer' }}>
+              {u}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ marginBottom: 16 }}>
+        <NumInput label={UNIT_LABELS[fromUnit]} unit={fromUnit} value={value} onChange={setValue} />
+      </div>
+
+      <ResultBig rows={others.map((u, i) => [UNIT_LABELS[u], num(inBbl / TO_BBL[u], u === 'gal' || u === 'L' ? 0 : 2), u] as [string, string, string])} />
+      <Formula>via bbl: 1 bbl = 0.158987 m³ = 42 gal = 158.987 L</Formula>
     </Panel>
   )
 }
+
+function CalcGas() {
+  const [p, setP] = useState(3000)
+  const [t, setT] = useState(200)
+  const [z, setZ] = useState(0.85)
+  const tR = t + 459.67
+  const bgMscf = 5.04 * z * tR / p          // res bbl/Mscf
+  const bgFt3  = 0.02829 * z * tR / p       // res ft³/scf
+  const bgM3   = bgFt3 * 0.028317            // res m³/sm³
+  return (
+    <Panel pad={18}>
+      <div style={{ display: 'grid', gap: 14, marginBottom: 16 }}>
+        <NumInput label="Reservoir pressure" unit="psia" value={p} onChange={setP} />
+        <NumInput label="Reservoir temperature" unit="°F" value={t} onChange={setT} />
+        <NumInput label="z-factor (gas compressibility)" unit="—" value={z} onChange={setZ} />
+      </div>
+      <ResultBig rows={[
+        ['Bg', num(bgMscf, 4), 'res bbl/Mscf'],
+        ['Bg', num(bgFt3, 6), 'res ft³/scf'],
+        ['Bg', num(bgM3, 6), 'res m³/sm³'],
+      ]} />
+      <Formula>Bg = 5.04 × z × T(°R) / P   |   T(°R) = {num(tR, 1)} °R</Formula>
+    </Panel>
+  )
+}
+
+function CalcProd() {
+  const [qi, setQi] = useState(500)
+  const [di, setDi] = useState(15)
+  const [t, setT]   = useState(12)
+  const diFrac = di / 100 / 12       // monthly nominal
+  const qt  = qi * Math.exp(-diFrac * t)
+  const np  = (qi / diFrac) * (1 - Math.exp(-diFrac * t))
+  const ratio = qt / qi * 100
+  return (
+    <Panel pad={18}>
+      <div style={{ display: 'grid', gap: 14, marginBottom: 16 }}>
+        <NumInput label="Initial rate (qi)" unit="BOPD" value={qi} onChange={setQi} />
+        <NumInput label="Nominal decline (Di)" unit="%/yr" value={di} onChange={setDi} />
+        <NumInput label="Forecast time (t)" unit="months" value={t} onChange={setT} />
+      </div>
+      <ResultBig rows={[
+        [`Rate at ${num(t, 0)} months`, num(qt, 0), 'BOPD'],
+        ['Cumulative Np', num(np, 0), 'bbl'],
+        ['Decline ratio (q/qi)', num(ratio, 1), '%'],
+      ]} />
+      <Formula>q(t) = qi × e^(−Di_mo × t)   |   Di_mo = {num(diFrac * 100, 4)}%/mo</Formula>
+    </Panel>
+  )
+}
+
+function CalcKill() {
+  const [omw, setOmw] = useState(9.6)
+  const [sidpp, setSidpp] = useState(400)
+  const [tvd, setTvd]   = useState(8000)
+  const [spr, setSpr]   = useState(600)
+  const kmw = omw + sidpp / (0.052 * tvd)
+  const icp = sidpp + spr
+  const fcp = (kmw / omw) * spr
+  return (
+    <Panel pad={18}>
+      <div style={{ display: 'grid', gap: 14, marginBottom: 16 }}>
+        <NumInput label="Original mud weight (OMW)" unit="ppg"  value={omw}   onChange={setOmw}   />
+        <NumInput label="SIDPP (shut-in drill pipe pressure)"   unit="psi"  value={sidpp} onChange={setSidpp} />
+        <NumInput label="True vertical depth (TVD)"             unit="ft"   value={tvd}   onChange={setTvd}   />
+        <NumInput label="Slow pump rate pressure (SPR)"         unit="psi"  value={spr}   onChange={setSpr}   />
+      </div>
+      <ResultBig rows={[
+        ['Kill mud weight', num(kmw, 2), 'ppg'],
+        ['Initial circ. pressure (ICP)', num(icp, 0), 'psi'],
+        ['Final circ. pressure (FCP)', num(fcp, 0), 'psi'],
+      ]} />
+      <Formula>KMW = OMW + SIDPP / (0.052 × TVD)   |   ICP = SIDPP + SPR</Formula>
+    </Panel>
+  )
+}
+
+function CalcTorque() {
+  const [ws,  setWs]  = useState(120)
+  const [mw,  setMw]  = useState(10)
+  const [inc, setInc] = useState(30)
+  const [mu,  setMu]  = useState(0.25)
+  const [od,  setOd]  = useState(5)
+  const θ   = (inc * Math.PI) / 180
+  const bf  = 1 - mw / 65.5
+  const wBuoy = ws * bf                         // klbs
+  const wn    = wBuoy * Math.sin(θ)             // klbs
+  const drag  = mu * wn                         // klbs
+  const hlRih = wBuoy * Math.cos(θ) - drag      // klbs
+  const hlPooh = wBuoy * Math.cos(θ) + drag     // klbs
+  const torque = mu * wn * (od / 2 / 12) * 1000 // ft·lbf
+  return (
+    <Panel pad={18}>
+      <div style={{ display: 'grid', gap: 14, marginBottom: 16 }}>
+        <NumInput label="String weight in air" unit="klbs" value={ws}  onChange={setWs}  />
+        <NumInput label="Mud weight"           unit="ppg"  value={mw}  onChange={setMw}  />
+        <NumInput label="Inclination"          unit="°"    value={inc} onChange={setInc} />
+        <NumInput label="Friction factor (µ)"  unit="—"    value={mu}  onChange={setMu}  />
+        <NumInput label="Pipe OD"              unit="in"   value={od}  onChange={setOd}  />
+      </div>
+      <ResultBig rows={[
+        ['Buoyancy factor', num(bf, 4), ''],
+        ['Hook load (RIH)',  num(hlRih, 1),  'klbs'],
+        ['Hook load (POOH)', num(hlPooh, 1), 'klbs'],
+        ['Rotary torque',   num(torque, 0),  'ft·lbf'],
+      ]} />
+      <Formula>BF = 1 − MW/65.5 = {num(bf, 4)}   |   T = µ × Wn × r</Formula>
+    </Panel>
+  )
+}
+
+// ─── Page ───────────────────────────────────────────────────────────────────
 
 export default function ToolsPage() {
   const [tool, setTool] = useState('hydro')
@@ -132,10 +276,14 @@ export default function ToolsPage() {
         {/* active calculator */}
         <div>
           <SectionHead eyebrow="Calculator" title={active[1]} />
-          {tool === 'hydro' && <CalcHydro />}
-          {tool === 'mud' && <CalcMud />}
-          {tool === 'api' && <CalcApi />}
-          {tool === 'conv' && <CalcConv />}
+          {tool === 'hydro'  && <CalcHydro />}
+          {tool === 'mud'    && <CalcMud />}
+          {tool === 'api'    && <CalcApi />}
+          {tool === 'conv'   && <CalcConv />}
+          {tool === 'gas'    && <CalcGas />}
+          {tool === 'prod'   && <CalcProd />}
+          {tool === 'kill'   && <CalcKill />}
+          {tool === 'torque' && <CalcTorque />}
         </div>
       </div>
     </div>

@@ -31,9 +31,9 @@ function Row({ label, sub, children, last }: { label: string; sub?: string; chil
   )
 }
 
-export function SettingsView({ role, orgName, orgCount, profileForm, telegramConnect }: {
+export function SettingsView({ role, orgName, orgCount, profileForm, telegramConnect, changePasswordForm }: {
   userName?: string; email?: string; role: string; orgName: string; orgCount: number
-  profileForm?: React.ReactNode; telegramConnect?: React.ReactNode
+  profileForm?: React.ReactNode; telegramConnect?: React.ReactNode; changePasswordForm?: React.ReactNode
 }) {
   const [notif, setNotif] = useState(true)
   const [digest, setDigest] = useState(false)
@@ -94,13 +94,20 @@ export function SettingsView({ role, orgName, orgCount, profileForm, telegramCon
 
       {/* security */}
       <SectionHead eyebrow="Security" title="Sign-in & sessions" />
-      <div className="ws-card">
+      <div className="ws-card" style={{ marginBottom: 18 }}>
         <Row label="Google sign-in" sub="OAuth · enabled"><Pill tone="ok">Active</Pill></Row>
         <Row label="Magic-link email" sub="Passwordless sign-in via Resend"><Pill tone="ok">Enabled</Pill></Row>
         <Row label="Organizations" sub={`You belong to ${orgCount} organization${orgCount === 1 ? '' : 's'}`} last>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--mb-ink-muted)' }}><Icon name="dot" size={10} />{orgName}</span>
         </Row>
       </div>
+
+      {changePasswordForm && (
+        <>
+          <SectionHead eyebrow="Security" title="Password" sub="Set a password to sign in with your email and password" />
+          {changePasswordForm}
+        </>
+      )}
     </div>
   )
 }

@@ -430,7 +430,7 @@ export function TimelineView({ tasks, expandedTaskIds, onToggleExpand, onTaskCli
             {depEdges.length > 0 && (
               <svg
                 className="absolute top-0 left-0 pointer-events-none z-30"
-                style={{ width: totalW, height: visibleRows.length * ROW_H }}
+                style={{ width: totalW, height: HDR_H + visibleRows.length * ROW_H }}
               >
                 <defs>
                   <marker

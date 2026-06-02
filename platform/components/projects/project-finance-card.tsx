@@ -72,7 +72,7 @@ export function ProjectFinanceCard({ projectId }: { projectId: string }) {
 function Metric({ label, value, className }: { label: string; value: string; className?: string }) {
   return (
     <div>
-      <div className="text-[10px] uppercase tracking-wider text-gray-4">{label}</div>
+      <div className="text-[10px] uppercase tracking-wider text-gray-2">{label}</div>
       <div className={`text-sm font-semibold mt-0.5 ${className ?? ''}`}>{value}</div>
     </div>
   )
