@@ -20,7 +20,7 @@ const jetbrainsMono = JetBrains_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'MetricBase Platform',
+  title: 'MetricBase Apps',
   description: 'Projects, finance, and field operations — one platform.',
   icons: {
     icon: '/favicon.svg',

@@ -27,6 +27,12 @@ model User {
   kind                String    @default("HUMAN")
   title               String?
   bio                 String?
+  // Platform-wide super-admin flag (manages the /admin panel). Distinct from
+  // the org-scoped Membership.role. Bootstrap via SUPERADMIN_EMAILS env.
+  isSuperAdmin        Boolean   @default(false)
+  // Account status: "ACTIVE" | "SUSPENDED". Suspended users cannot sign in and
+  // any live session is bounced to sign-in.
+  status              String    @default("ACTIVE")
   // Telegram bot linking — set only after a verified /start <code> handshake.
   telegramUserId      BigInt?   @unique @map("telegram_user_id")
   telegramUsername    String?   @map("telegram_username")
@@ -182,6 +188,13 @@ model Membership {
   userId         String
   organizationId String
   role           Role     @default(OWNER)
+  // Per-app access allow-list of app ids (see lib/apps.ts). Outside the trial,
+  // empty = no apps; only the apps a super-admin has granted are accessible.
+  appAccess      String[] @default([])
+  // 14-day all-apps trial for this membership. While now < trialEndsAt every
+  // app is unlocked; after it expires only `appAccess` grants apply. null =
+  // no trial (treated as expired).
+  trialEndsAt    DateTime?
   createdAt      DateTime @default(now())
 
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)

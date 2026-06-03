@@ -2,8 +2,14 @@ import { getOrgContext } from '@/lib/org'
 import { prisma } from '@/lib/prisma'
 import { HomeView, type HomeData } from '@/app/home/HomeView'
 import type { AppId, Tone } from '@/app/home/ui'
+import { canAccessApp, type AppAccessId } from '@/lib/apps'
 
 export const dynamic = 'force-dynamic'
+
+// Visual AppId → per-app gating key (lib/apps.ts).
+const APPID_ACCESS: Record<AppId, AppAccessId> = {
+  probase: 'projects', metricbase: 'finance', fieldflow: 'field', ogtools: 'tools',
+}
 
 const MODULE_APP: Record<string, AppId> = {
   finance: 'metricbase',
@@ -115,7 +121,11 @@ export default async function HomePage() {
     return { app: 'probase' as AppId, title: t.title, due: d.label, tone: d.tone, href: `/projects/${t.projectId}` }
   })
 
-  const pinned: HomeData['pinned'] = apps.map((a) => ({ app: a.id, label: `${APP_LABEL[a.id]} overview`, kind: a.sub, href: a.href }))
+  // Hide apps this membership isn't allowed to open (trial-aware).
+  const accessCtx = { appAccess: activeOrg.appAccess, trialEndsAt: activeOrg.trialEndsAt, isSuperAdmin: user.isSuperAdmin }
+  const visibleApps = apps.filter((a) => canAccessApp(APPID_ACCESS[a.id], accessCtx))
+
+  const pinned: HomeData['pinned'] = visibleApps.map((a) => ({ app: a.id, label: `${APP_LABEL[a.id]} overview`, kind: a.sub, href: a.href }))
 
   const displayName = user.name || (user.email
     ? user.email.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
@@ -124,7 +134,7 @@ export default async function HomePage() {
   const data: HomeData = {
     userName: displayName,
     orgName: activeOrg.name,
-    apps, kpis, activity, tasks, pinned,
+    apps: visibleApps, kpis, activity, tasks, pinned,
     attention: assignedTasks.length + unreadNotifs,
   }
 

@@ -23,6 +23,9 @@ export default async function SettingsPage() {
       role={activeOrg.role}
       orgName={activeOrg.name}
       orgCount={orgs.length}
+      appAccess={activeOrg.appAccess}
+      trialEndsAt={activeOrg.trialEndsAt}
+      isSuperAdmin={user.isSuperAdmin}
       profileForm={
         <ProfileForm
           userId={user.id}

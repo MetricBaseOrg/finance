@@ -18,7 +18,7 @@ const field: React.CSSProperties = {
   background: 'var(--mb-surface-2)', fontFamily: 'inherit', fontSize: 13, color: 'var(--mb-ink)', outline: 'none',
 }
 
-export function SignInForm() {
+export function SignInForm({ suspended = false }: { suspended?: boolean }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState<'cred' | 'magic' | 'google' | 'microsoft' | null>(null)
@@ -84,6 +84,12 @@ export function SignInForm() {
             <h2 style={{ fontSize: 23, fontWeight: 800, letterSpacing: '-0.025em', color: 'var(--mb-ink)', margin: 0 }}>Sign in</h2>
             <p style={{ fontSize: 13, color: 'var(--mb-ink-muted)', marginTop: 6 }}>Use your MetricBase organization account.</p>
           </div>
+
+          {suspended && (
+            <div style={{ marginBottom: 18, padding: '11px 13px', borderRadius: 9, background: 'var(--mb-bad-soft)', border: '1px solid color-mix(in oklch, var(--mb-bad) 30%, transparent)', fontSize: 12.5, color: 'var(--mb-bad-ink)', lineHeight: 1.5 }}>
+              Your account has been suspended. Contact an administrator to restore access.
+            </div>
+          )}
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
             <button className="ws-btn" disabled={loading !== null} onClick={() => { setLoading('microsoft'); signIn('microsoft-entra-id', { callbackUrl: '/home' }) }}

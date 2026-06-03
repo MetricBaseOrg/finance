@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { can, getRole, isRole } from '@/lib/permissions'
+import { trialEndsFromNow } from '@/lib/apps'
 
 /**
  * POST /api/members  — invite an existing user to a workspace.
@@ -36,7 +37,7 @@ export async function POST(req: Request) {
   if (actorRole === 'ADMIN' && requestedRole === 'OWNER') requestedRole = 'ADMIN'
 
   const member = await prisma.membership.create({
-    data: { userId: user.id, organizationId, role: requestedRole },
+    data: { userId: user.id, organizationId, role: requestedRole, trialEndsAt: trialEndsFromNow() },
     include: { user: { select: { id: true, name: true, email: true, image: true } } },
   })
 

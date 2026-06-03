@@ -3,20 +3,23 @@
 import { useState, useRef, useEffect, useTransition } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { ChevronDown, LogOut, Grip, Search, MessageSquare } from 'lucide-react'
+import { ChevronDown, LogOut, Grip, Search, MessageSquare, Shield } from 'lucide-react'
 import { AppMark, AppTile, type AppId } from '@/app/home/ui'
 import { NotificationBell } from '@/components/notifications/notification-bell'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { setActiveOrg, signOutAction } from '../actions'
 import type { OrgSummary, SessionUser } from '@/lib/org'
+import { canAccessApp, type AppAccessId } from '@/lib/apps'
 
-const APPS: { id: AppId | 'workspace' | 'chat'; name: string; sub: string; href: string }[] = [
+// `id` drives the visual identity (AppMark / --c-* color); `access` is the
+// per-app gating key from lib/apps.ts (undefined = always available).
+const APPS: { id: AppId | 'workspace' | 'chat'; access?: AppAccessId; name: string; sub: string; href: string }[] = [
   { id: 'workspace', name: 'Workspace', sub: 'Home', href: '/home' },
-  { id: 'probase', name: 'ProBase', sub: 'Projects', href: '/projects' },
-  { id: 'metricbase', name: 'Finance', sub: 'Tracker', href: '/finance' },
-  { id: 'fieldflow', name: 'FieldFlow', sub: 'Field ops', href: '/field' },
-  { id: 'ogtools', name: 'OGtools', sub: 'Calculators', href: '/tools' },
-  { id: 'chat', name: 'Chat', sub: 'Team', href: '/chat' },
+  { id: 'probase', access: 'projects', name: 'ProBase', sub: 'Projects', href: '/projects' },
+  { id: 'metricbase', access: 'finance', name: 'Finance', sub: 'Tracker', href: '/finance' },
+  { id: 'fieldflow', access: 'field', name: 'FieldFlow', sub: 'Field ops', href: '/field' },
+  { id: 'ogtools', access: 'tools', name: 'OGtools', sub: 'Calculators', href: '/tools' },
+  { id: 'chat', access: 'chat', name: 'Chat', sub: 'Team', href: '/chat' },
 ]
 
 function currentApp(pathname: string): typeof APPS[number] {
@@ -31,14 +34,17 @@ function currentApp(pathname: string): typeof APPS[number] {
 // Apps without a dedicated AppMark glyph render a lucide icon instead.
 const GENERIC_APP_ICON: Record<string, typeof Grip> = { workspace: Grip, chat: MessageSquare }
 
-export function WorkspaceTopBar({ user, orgs, activeOrgId }: {
+export function WorkspaceTopBar({ user, orgs, activeOrgId, appAccess, trialEndsAt, isSuperAdmin }: {
   user: SessionUser; orgs: OrgSummary[]; activeOrgId: string
+  appAccess: string[]; trialEndsAt: string | null; isSuperAdmin: boolean
 }) {
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
   const [pending, startTransition] = useTransition()
   const menuRef = useRef<HTMLDivElement>(null)
   const cur = currentApp(pathname)
+  const accessCtx = { appAccess, trialEndsAt, isSuperAdmin }
+  const visibleApps = APPS.filter((a) => !a.access || canAccessApp(a.access, accessCtx))
   const initials = (user.name ?? user.email).slice(0, 2).toUpperCase()
   const isGenericApp = cur.id in GENERIC_APP_ICON
   const logoColor = isGenericApp ? 'var(--mb-brand)' : `var(--c-${cur.id})`
@@ -74,7 +80,7 @@ export function WorkspaceTopBar({ user, orgs, activeOrgId }: {
         </button>
         {open && (
           <div className="ws-card" style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, width: 248, padding: 6, zIndex: 40 }}>
-            {APPS.map((a) => {
+            {visibleApps.map((a) => {
               const active = a.id === cur.id
               return (
                 <Link key={a.id} href={a.href}
@@ -146,6 +152,12 @@ export function WorkspaceTopBar({ user, orgs, activeOrgId }: {
         style={{ display: 'grid', placeItems: 'center', color: cur.id === 'chat' ? 'var(--mb-brand)' : 'var(--mb-ink-2)' }}>
         <MessageSquare className="h-4 w-4" />
       </Link>
+      {isSuperAdmin && (
+        <Link href="/admin" className="ws-iconbtn" title="Admin panel" aria-label="Admin panel"
+          style={{ display: 'grid', placeItems: 'center', color: pathname.startsWith('/admin') ? 'var(--mb-brand)' : 'var(--mb-ink-2)' }}>
+          <Shield className="h-4 w-4" />
+        </Link>
+      )}
       <NotificationBell className="ws-iconbtn" />
       <ThemeToggle className="ws-iconbtn" />
       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>

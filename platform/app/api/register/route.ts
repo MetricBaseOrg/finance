@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
 import { generateSlug } from '@/lib/utils'
+import { trialEndsFromNow } from '@/lib/apps'
 
 export async function POST(req: Request) {
   try {
@@ -32,7 +33,7 @@ export async function POST(req: Request) {
         name: wsName,
         slug: generateSlug(wsName),
         members: {
-          create: { userId: user.id, role: 'OWNER' },
+          create: { userId: user.id, role: 'OWNER', trialEndsAt: trialEndsFromNow() },
         },
       },
     })

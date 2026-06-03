@@ -16,7 +16,14 @@ export default async function AppLayout({
 
   return (
     <div className="mb-root" data-app="workspace" style={{ height: '100dvh', display: 'flex', flexDirection: 'column' }}>
-      <WorkspaceTopBar user={user} orgs={orgs} activeOrgId={activeOrg.id} />
+      <WorkspaceTopBar
+        user={user}
+        orgs={orgs}
+        activeOrgId={activeOrg.id}
+        appAccess={activeOrg.appAccess}
+        trialEndsAt={activeOrg.trialEndsAt}
+        isSuperAdmin={user.isSuperAdmin}
+      />
       <main style={{ flex: 1, minWidth: 0, overflowY: 'auto' }}>{children}</main>
       <GlobalSearch />
     </div>

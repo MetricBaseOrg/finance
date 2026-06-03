@@ -1,5 +1,6 @@
 import '@/app/home/workspace.css'
 import { requireMembership } from '@/server/workspace'
+import { requireAppAccess } from '@/lib/org'
 import { FinanceChrome } from './FinanceChrome'
 
 // Finance adopts the new MetricBase Workspace design (bronze accent) via the
@@ -12,6 +13,7 @@ export default async function FinanceLayout({
   children: React.ReactNode
   params: Promise<{ workspace: string }>
 }) {
+  await requireAppAccess('finance')
   const { workspace } = await requireMembership((await params).workspace)
 
   return (

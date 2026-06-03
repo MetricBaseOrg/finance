@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { generateSlug } from '@/lib/utils'
+import { trialEndsFromNow } from '@/lib/apps'
 
 export async function GET() {
   const session = await auth()
@@ -43,7 +44,7 @@ export async function POST(req: Request) {
       slug: generateSlug(name),
       description,
       color: color || '#6366f1',
-      members: { create: { userId: session.user.id, role: 'OWNER' } },
+      members: { create: { userId: session.user.id, role: 'OWNER', trialEndsAt: trialEndsFromNow() } },
     },
     include: { members: { include: { user: { select: { id: true, name: true, email: true, image: true } } } } },
   })

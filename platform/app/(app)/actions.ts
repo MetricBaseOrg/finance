@@ -4,6 +4,7 @@ import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { auth, signOut } from '@/auth'
 import { prisma } from '@/lib/prisma'
+import { trialEndsFromNow } from '@/lib/apps'
 import { slugify } from '@/lib/utils'
 import { ACTIVE_ORG_COOKIE } from '@/lib/org'
 
@@ -42,7 +43,7 @@ export async function createOrg(formData: FormData) {
       slug,
       baseCurrency: baseCurrency === 'USD' ? 'USD' : 'IDR',
       members: {
-        create: { userId: session.user.id, role: 'OWNER' },
+        create: { userId: session.user.id, role: 'OWNER', trialEndsAt: trialEndsFromNow() },
       },
     },
   })

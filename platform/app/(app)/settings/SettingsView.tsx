@@ -1,14 +1,22 @@
 'use client'
 
 import { useState } from 'react'
+import { MessageSquare } from 'lucide-react'
 import { AppTile, Pill, SectionHead, Btn, Icon, type AppId } from '@/app/home/ui'
+import { APP_IDS, APP_META, canAccessApp, trialState, type AppAccessId } from '@/lib/apps'
+import { SUPPORT_EMAIL, SUPPORT_X, SUPPORT_X_URL } from '@/lib/support'
 
-const APPS: { id: AppId; name: string; sub: string; tagline: string; href: string }[] = [
-  { id: 'probase', name: 'ProBase', sub: 'Projects', tagline: 'Plan, schedule & track delivery', href: '/projects' },
-  { id: 'metricbase', name: 'Finance', sub: 'Tracker', tagline: 'Multi-currency books, P&L & balance sheet', href: '/finance' },
-  { id: 'fieldflow', name: 'FieldFlow', sub: 'Field ops', tagline: 'Crude production, lifting & dispatch', href: '/field' },
-  { id: 'ogtools', name: 'OGtools', sub: 'Calculators', tagline: 'Oilfield engineering calculators', href: '/tools' },
-]
+// Per-app access id → visual AppId for AppTile (chat has no glyph → icon tile).
+const APP_VISUAL: Record<AppAccessId, AppId | null> = {
+  projects: 'probase', finance: 'metricbase', field: 'fieldflow', tools: 'ogtools', chat: null,
+}
+const APP_TAGLINE: Record<AppAccessId, string> = {
+  projects: 'Plan, schedule & track delivery',
+  finance: 'Multi-currency books, P&L & balance sheet',
+  field: 'Crude production, lifting & dispatch',
+  tools: 'Oilfield engineering calculators',
+  chat: 'Team channels & direct messages',
+}
 
 function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
   return (
@@ -31,12 +39,14 @@ function Row({ label, sub, children, last }: { label: string; sub?: string; chil
   )
 }
 
-export function SettingsView({ role, orgName, orgCount, profileForm, telegramConnect, changePasswordForm }: {
+export function SettingsView({ role, orgName, orgCount, appAccess, trialEndsAt, isSuperAdmin, profileForm, telegramConnect, changePasswordForm }: {
   userName?: string; email?: string; role: string; orgName: string; orgCount: number
+  appAccess: string[]; trialEndsAt: string | null; isSuperAdmin: boolean
   profileForm?: React.ReactNode; telegramConnect?: React.ReactNode; changePasswordForm?: React.ReactNode
 }) {
   const [notif, setNotif] = useState(true)
   const [digest, setDigest] = useState(false)
+  const trial = trialState(trialEndsAt)
 
   return (
     <div style={{ maxWidth: 760, margin: '0 auto', padding: '26px var(--ws-gutter) 60px' }} className="ws-fade">
@@ -64,20 +74,65 @@ export function SettingsView({ role, orgName, orgCount, profileForm, telegramCon
         <Row label="Daily digest" sub="A morning summary of cross-app activity" last><Toggle on={digest} onChange={setDigest} /></Row>
       </div>
 
-      {/* connected apps */}
-      <SectionHead eyebrow="Access" title="Connected apps" sub="Apps available to you in this workspace" />
-      <div className="ws-card" style={{ marginBottom: 18 }}>
-        {APPS.map((a, i) => (
-          <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 13, padding: '13px 16px', borderBottom: i < APPS.length - 1 ? '1px solid var(--mb-divider)' : 'none' }}>
-            <AppTile app={a.id} size={36} radius={10} />
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--mb-ink)' }}>{a.name} <span style={{ fontWeight: 400, color: 'var(--mb-ink-soft)' }}>· {a.sub}</span></div>
-              <div style={{ fontSize: 11, color: 'var(--mb-ink-muted)' }}>{a.tagline}</div>
-            </div>
-            <Pill tone="ok">Access granted</Pill>
-            <Btn kind="quiet" href={a.href} style={{ color: 'var(--mb-brand)' }}>Open</Btn>
+      {/* connected apps + trial / access status */}
+      <SectionHead eyebrow="Access" title="Connected apps" sub="Your app access in this workspace" />
+
+      {/* trial / contact banner */}
+      <div className="ws-card" style={{ marginBottom: 12, padding: '13px 16px', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+        <div style={{ flex: 1, minWidth: 200 }}>
+          <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--mb-ink)' }}>
+            {isSuperAdmin
+              ? 'Full platform access'
+              : trial.onTrial
+                ? `Free trial — ${trial.daysLeft} day${trial.daysLeft === 1 ? '' : 's'} left`
+                : 'Trial ended'}
           </div>
-        ))}
+          <div style={{ fontSize: 11, color: 'var(--mb-ink-muted)', marginTop: 2 }}>
+            {isSuperAdmin
+              ? 'You can open every app.'
+              : trial.onTrial
+                ? `All apps are unlocked until your trial ends${trial.endsAt ? ` on ${trial.endsAt.toLocaleDateString()}` : ''}.`
+                : 'Contact Bun to request access or pay for the apps you need.'}
+          </div>
+        </div>
+        {!isSuperAdmin && (
+          <div style={{ display: 'flex', gap: 8 }}>
+            <Btn kind="soft" href={`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(`App access request (${orgName})`)}`}>{SUPPORT_EMAIL}</Btn>
+            <Btn kind="quiet" href={SUPPORT_X_URL} style={{ color: 'var(--mb-brand)' }}>{SUPPORT_X} on X</Btn>
+          </div>
+        )}
+      </div>
+
+      <div className="ws-card" style={{ marginBottom: 18 }}>
+        {APP_IDS.map((id, i) => {
+          const meta = APP_META[id]
+          const visual = APP_VISUAL[id]
+          const granted = isSuperAdmin || appAccess.includes(id)
+          const allowed = canAccessApp(id, { appAccess, trialEndsAt, isSuperAdmin })
+          return (
+            <div key={id} style={{ display: 'flex', alignItems: 'center', gap: 13, padding: '13px 16px', borderBottom: i < APP_IDS.length - 1 ? '1px solid var(--mb-divider)' : 'none' }}>
+              {visual
+                ? <AppTile app={visual} size={36} radius={10} />
+                : <span style={{ width: 36, height: 36, borderRadius: 10, display: 'grid', placeItems: 'center', background: 'var(--mb-surface-2)', border: '1px solid var(--mb-border)', color: 'var(--mb-ink-muted)' }}><MessageSquare className="h-4 w-4" /></span>}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--mb-ink)' }}>{meta.name} <span style={{ fontWeight: 400, color: 'var(--mb-ink-soft)' }}>· {meta.sub}</span></div>
+                <div style={{ fontSize: 11, color: 'var(--mb-ink-muted)' }}>{APP_TAGLINE[id]}</div>
+              </div>
+              {granted ? (
+                <Pill tone="ok">Granted</Pill>
+              ) : allowed ? (
+                <Pill tone="info">Trial</Pill>
+              ) : (
+                <Pill tone="warn">Locked</Pill>
+              )}
+              {allowed ? (
+                <Btn kind="quiet" href={meta.href} style={{ color: 'var(--mb-brand)' }}>Open</Btn>
+              ) : (
+                <Btn kind="quiet" href={`/access?app=${id}`} style={{ color: 'var(--mb-brand)' }}>Request</Btn>
+              )}
+            </div>
+          )
+        })}
       </div>
 
       {/* team / agents */}

@@ -25,6 +25,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         const user = await prisma.user.findUnique({ where: { email } })
         if (!user?.password) return null
+        // Suspended accounts cannot sign in.
+        if (user.status === 'SUSPENDED') return null
 
         const ok = await bcrypt.compare(password, user.password)
         if (!ok) return null

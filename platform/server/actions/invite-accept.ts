@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { Prisma } from "@/app/generated/prisma/client";
 import { db } from "@/server/db";
+import { trialEndsFromNow } from "@/lib/apps";
 import { requireUser } from "@/server/workspace";
 import { logAudit } from "@/server/audit";
 
@@ -48,6 +49,7 @@ export async function acceptInvite(
             userId: user.id,
             organizationId: invite.organizationId,
             role: invite.role,
+            trialEndsAt: trialEndsFromNow(),
           },
         }),
         db.orgInvite.update({

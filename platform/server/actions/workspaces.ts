@@ -4,6 +4,7 @@ import { z } from "zod";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { db } from "@/server/db";
+import { trialEndsFromNow } from "@/lib/apps";
 import { requireMembership, requireUser, slugify } from "@/server/workspace";
 import { logAudit } from "@/server/audit";
 import {
@@ -56,7 +57,7 @@ export async function createWorkspace(
       type,
       baseCurrency,
       members: {
-        create: { userId: user.id, role: "OWNER" },
+        create: { userId: user.id, role: "OWNER", trialEndsAt: trialEndsFromNow() },
       },
       categories: {
         create: [
