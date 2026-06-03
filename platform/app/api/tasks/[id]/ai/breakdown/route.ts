@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
-import { breakdownTask, isAIConfigured } from '@/lib/ai'
+import { breakdownTask } from '@/lib/ai'
+import { isOrgAIConfigured } from '@/lib/anthropic'
 
 /**
  * POST /api/tasks/:id/ai/breakdown
@@ -13,9 +14,6 @@ import { breakdownTask, isAIConfigured } from '@/lib/ai'
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  if (!isAIConfigured()) {
-    return NextResponse.json({ error: 'AI is not configured on this server.' }, { status: 503 })
-  }
 
   const { id } = await params
 
@@ -26,6 +24,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
       description: true,
       project: {
         select: {
+          organizationId: true,
           workspace: {
             select: { members: { where: { userId: session.user.id }, select: { id: true } } },
           },
@@ -38,10 +37,16 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
+  const orgId = task.project.organizationId
+  if (!(await isOrgAIConfigured(orgId))) {
+    return NextResponse.json({ error: 'AI is not configured on this server.' }, { status: 503 })
+  }
+
   try {
     const result = await breakdownTask({
       title: task.title,
       description: task.description || undefined,
+      organizationId: orgId,
     })
     return NextResponse.json(result)
   } catch (err) {

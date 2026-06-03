@@ -386,7 +386,7 @@ export function TaskDetail({ taskId, initialTask, userRole, currentUserId, membe
       onClick={e => e.target === e.currentTarget && onClose()}
     >
       <div className="absolute inset-0 bg-black/40 sm:bg-black/20 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full sm:max-w-2xl h-[92dvh] sm:h-full bg-bg-card shadow-2xl overflow-y-auto flex flex-col z-50 rounded-t-2xl sm:rounded-none pb-[env(safe-area-inset-bottom)]">
+      <div className="relative w-full sm:max-w-2xl h-[92dvh] sm:h-full bg-bg-card shadow-2xl overflow-y-auto overflow-x-hidden flex flex-col z-50 rounded-t-2xl sm:rounded-none pb-[env(safe-area-inset-bottom)]">
         {loading ? (
           <div className="flex-1 flex items-center justify-center">
             <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
@@ -641,12 +641,18 @@ export function TaskDetail({ taskId, initialTask, userRole, currentUserId, membe
                     </div>
                   </div>
                 ) : (
-                  <button
+                  <div
                     onClick={() => setEditingDesc(true)}
-                    className="w-full text-left text-sm text-gray-2 p-3 rounded-lg border border-transparent hover:border-border-str hover:bg-bg-hover transition-colors min-h-[60px]"
+                    className="w-full text-left text-sm text-gray-2 p-3 rounded-lg border border-transparent hover:border-border-str hover:bg-bg-hover transition-colors min-h-[60px] cursor-pointer"
                   >
-                    {task.description || <span className="text-gray-400 italic">Add a description...</span>}
-                  </button>
+                    {task.description ? (
+                      <div className={`comment-body ${MD_BASE} text-gray-2 ${MD_VARIANTS}`}>
+                        <Markdown remarkPlugins={[remarkGfm]}>{task.description}</Markdown>
+                      </div>
+                    ) : (
+                      <span className="text-gray-4 italic">Add a description...</span>
+                    )}
+                  </div>
                 )}
               </div>
 
@@ -847,7 +853,7 @@ export function TaskDetail({ taskId, initialTask, userRole, currentUserId, membe
                           </AvatarFallback>
                         </Avatar>
                       </Link>
-                      <div className="flex-1">
+                      <div className="flex-1 min-w-0">
                         <div className="flex items-baseline gap-2">
                           <Link href={`/u/${c.user.id}`} className="text-xs font-semibold text-gray-1 hover:text-indigo-600 hover:underline">{c.user.name || c.user.email}</Link>
                           <span className="text-xs text-gray-4">{format(new Date(c.createdAt), 'MMM d, h:mm a')}</span>
@@ -886,15 +892,18 @@ export function TaskDetail({ taskId, initialTask, userRole, currentUserId, membe
   )
 }
 
-// ── @mention highlighter ─────────────────────────────────────────────────────
+// ── Markdown styling (shared for comments + descriptions) ───────────────────
 const MENTION_TOKEN_RE = /(@[\w.+-]+)/g
+const MD_BASE = 'text-sm leading-relaxed break-words'
+const MD_VARIANTS = '[&_p]:my-1 [&_p]:break-words [&_ul]:my-1 [&_ol]:my-1 [&_li]:ml-4 [&_li]:break-words [&_code]:text-[var(--color-gold)] [&_code]:text-[11px] [&_code]:bg-[var(--color-bg-hover)] [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_pre]:my-2 [&_pre]:bg-[var(--color-bg-hover)] [&_pre]:p-3 [&_pre]:rounded-lg [&_pre]:overflow-x-auto [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_table]:my-2 [&_table]:border-collapse [&_table]:max-w-full [&_th]:px-2 [&_th]:py-1 [&_th]:text-[10px] [&_th]:uppercase [&_th]:tracking-wider [&_th]:text-gray-3 [&_th]:border [&_th]:border-line [&_th]:bg-[var(--color-bg-hover)] [&_th]:break-words [&_td]:px-2 [&_td]:py-0.5 [&_td]:text-xs [&_td]:text-gray-2 [&_td]:border [&_td]:border-line [&_td]:break-words [&_a]:text-indigo-400 [&_a]:underline [&_a]:break-all [&_strong]:font-bold [&_em]:italic [&_.mention]:bg-indigo-50 [&_.mention]:dark:bg-indigo-500/20 [&_.mention]:text-indigo-700 [&_.mention]:dark:text-indigo-300 [&_.mention]:rounded [&_.mention]:px-1 [&_.mention]:py-0.5 [&_.mention]:text-[0.95em] [&_.mention]:font-medium'
+
 function CommentBody({ text }: { text: string }) {
   const highlighted = text.replace(
     MENTION_TOKEN_RE,
     (m) => `<span class="mention">${m}</span>`
   )
   return (
-    <div className="comment-body text-sm text-gray-1 leading-relaxed [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_li]:ml-4 [&_code]:text-[var(--color-gold)] [&_code]:text-[11px] [&_code]:bg-[var(--color-bg-hover)] [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_pre]:my-2 [&_pre]:bg-[var(--color-bg-hover)] [&_pre]:p-3 [&_pre]:rounded-lg [&_pre]:overflow-x-auto [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_table]:my-2 [&_table]:border-collapse [&_th]:px-2 [&_th]:py-1 [&_th]:text-[10px] [&_th]:uppercase [&_th]:tracking-wider [&_th]:text-gray-3 [&_th]:border [&_th]:border-line [&_th]:bg-[var(--color-bg-hover)] [&_td]:px-2 [&_td]:py-0.5 [&_td]:text-xs [&_td]:text-gray-2 [&_td]:border [&_td]:border-line [&_a]:text-indigo-400 [&_a]:underline [&_strong]:font-bold [&_em]:italic [&_.mention]:bg-indigo-50 [&_.mention]:dark:bg-indigo-500/20 [&_.mention]:text-indigo-700 [&_.mention]:dark:text-indigo-300 [&_.mention]:rounded [&_.mention]:px-1 [&_.mention]:py-0.5 [&_.mention]:text-[0.95em] [&_.mention]:font-medium">
+    <div className={`comment-body ${MD_BASE} text-gray-1 ${MD_VARIANTS}`}>
       <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{highlighted}</Markdown>
     </div>
   )

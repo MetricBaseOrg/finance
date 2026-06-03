@@ -233,7 +233,7 @@ export function TimelineView({ tasks, expandedTaskIds, onToggleExpand, onTaskCli
 
         {/* ── LEFT: frozen name column ─────────────────────────────────── */}
         <div
-          className="flex-shrink-0 border-r border-line flex flex-col z-10"
+          className="flex-shrink-0 border-r border-line flex flex-col z-40"
           style={{ width: nameW }}
         >
           {/* Header placeholder aligned to timeline header height */}
@@ -323,7 +323,7 @@ export function TimelineView({ tasks, expandedTaskIds, onToggleExpand, onTaskCli
             <div className="relative" style={{ width: totalW, minWidth: totalW }}>
 
             {/* Sticky header: month + day rows */}
-            <div className="sticky top-0 z-10 bg-bg-card border-b border-line" style={{ height: HDR_H }}>
+            <div className="sticky top-0 z-40 bg-bg-card border-b border-line" style={{ height: HDR_H }}>
               {/* Month labels */}
               <div className="flex border-b border-line" style={{ height: HDR_H / 2 }}>
                 {monthGroups.map(g => (

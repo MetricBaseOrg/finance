@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
+import { getOrgAnthropic } from './anthropic'
 
 /**
  * Thin wrapper around the Anthropic Messages API. The base URL is overrideable
@@ -13,23 +14,8 @@ import Anthropic from '@anthropic-ai/sdk'
  *     unsupported fields are silently ignored).
  */
 
-let _client: Anthropic | null = null
-function client(): Anthropic | null {
-  const apiKey = process.env.ANTHROPIC_API_KEY
-  if (!apiKey) return null
-  if (_client) return _client
-  _client = new Anthropic({
-    apiKey,
-    ...(process.env.ANTHROPIC_BASE_URL && { baseURL: process.env.ANTHROPIC_BASE_URL }),
-  })
-  return _client
-}
-
-const MODEL = process.env.ANTHROPIC_MODEL || 'mimo-7b-rl'
-
-export function isAIConfigured(): boolean {
-  return Boolean(process.env.ANTHROPIC_API_KEY)
-}
+// Note: direct AI helpers (breakdown/summarize) now prefer per-org config (via resolveAi/getOrgAnthropic)
+// falling back to env ANTHROPIC_*. This unifies with agents etc.
 
 // ── Feature 1: break a task into subtasks ────────────────────────────────────
 
@@ -46,16 +32,20 @@ Rules:
 export async function breakdownTask(params: {
   title: string
   description?: string
+  organizationId?: string | null
 }): Promise<{ subtasks: string[] }> {
-  const c = client()
-  if (!c) throw new Error('AI is not configured (ANTHROPIC_API_KEY missing)')
+  const ai = await getOrgAnthropic(params.organizationId)
+  if (!ai) throw new Error('AI is not configured (no workspace key and ANTHROPIC_API_KEY missing)')
+
+  const c = ai.client
+  const model = ai.model
 
   const userContent = params.description
     ? `Parent task: "${params.title}"\n\nDescription:\n${params.description}`
     : `Parent task: "${params.title}"`
 
   const response = await c.messages.create({
-    model: MODEL,
+    model,
     max_tokens: 600,
     system: [
       {
@@ -116,9 +106,13 @@ Rules:
 export async function summarizeComments(params: {
   taskTitle: string
   comments: Array<{ author: string; createdAt: string; content: string }>
+  organizationId?: string | null
 }): Promise<{ tldr: string[]; openQuestions: string[]; decisions: string[] }> {
-  const c = client()
-  if (!c) throw new Error('AI is not configured (ANTHROPIC_API_KEY missing)')
+  const ai = await getOrgAnthropic(params.organizationId)
+  if (!ai) throw new Error('AI is not configured (no workspace key and ANTHROPIC_API_KEY missing)')
+
+  const c = ai.client
+  const model = ai.model
 
   // Render the thread as a plain transcript
   const transcript = params.comments.map(c2 =>
@@ -128,7 +122,7 @@ export async function summarizeComments(params: {
   const userContent = `Task: "${params.taskTitle}"\n\nThread:\n\n${transcript}`
 
   const response = await c.messages.create({
-    model: MODEL,
+    model,
     max_tokens: 700,
     system: [
       {

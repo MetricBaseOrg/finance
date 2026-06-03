@@ -6,6 +6,8 @@ import { Bell, BellDot, Check, AtSign, UserPlus, MessageSquare, ArrowLeftRight }
 import { UserAvatar } from '@/components/ui/user-avatar'
 import { formatDistanceToNow } from 'date-fns'
 import { cn, getInitials } from '@/lib/utils'
+import Markdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 interface Notification {
   id: string
@@ -287,9 +289,20 @@ export function NotificationBell({ className }: { className?: string }) {
                       </span>
                       {!n.read && <span className="h-1.5 w-1.5 rounded-full bg-indigo-500 flex-shrink-0" />}
                     </div>
-                    <p className="text-xs text-gray-2 mt-0.5 line-clamp-2">
-                      {describeNotification(n.kind, meta)}
-                    </p>
+                    {(n.kind === 'mention' || n.kind === 'comment.added') && meta.preview ? (
+                      <div className="text-xs text-gray-2 mt-0.5 line-clamp-2 break-words [&_code]:text-[var(--color-gold)] [&_code]:text-[10px] [&_code]:bg-[var(--color-bg-hover)] [&_code]:px-0.5 [&_code]:py-px [&_code]:rounded [&_strong]:font-semibold [&_em]:italic">
+                        {n.kind === 'mention' ? 'mentioned you: ' : 'commented: '}
+                        “<span className="not-italic">
+                          <Markdown remarkPlugins={[remarkGfm]} components={{ p: ({ children }) => <span>{children}</span> }}>
+                            {meta.preview}
+                          </Markdown>
+                        </span>”
+                      </div>
+                    ) : (
+                      <p className="text-xs text-gray-2 mt-0.5 line-clamp-2 break-words">
+                        {describeNotification(n.kind, meta)}
+                      </p>
+                    )}
                     {n.task && (
                       <div className="flex items-center gap-1 mt-1 text-[11px] text-gray-3">
                         <div className="w-1.5 h-1.5 rounded-sm flex-shrink-0" style={{ backgroundColor: n.task.project.color }} />
@@ -313,11 +326,11 @@ export function NotificationBell({ className }: { className?: string }) {
 function describeNotification(kind: string, meta: { preview?: string; taskTitle?: string; title?: string; body?: string }): string {
   switch (kind) {
     case 'mention':
-      return meta.preview ? `mentioned you: "${meta.preview}"` : 'mentioned you in a comment'
+      return 'mentioned you'
     case 'task.assigned':
       return meta.title ? `assigned you to "${meta.title}"` : 'assigned a task to you'
     case 'comment.added':
-      return meta.preview ? `commented: "${meta.preview}"` : 'left a comment'
+      return 'left a comment'
     case 'finance.notification':
       return meta.body || meta.title || 'New notification'
     default:

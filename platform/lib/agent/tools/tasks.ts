@@ -289,8 +289,8 @@ const breakDownTaskTool: AgentTool = {
       required: ['title'],
     },
   },
-  async execute(_ctx: ToolContext, input: { title: string; description?: string }) {
-    const { subtasks } = await breakdownTask({ title: input.title, description: input.description })
+  async execute(ctx: ToolContext, input: { title: string; description?: string }) {
+    const { subtasks } = await breakdownTask({ title: input.title, description: input.description, organizationId: ctx.organizationId })
     return { subtasks }
   },
 }
@@ -328,6 +328,7 @@ const summarizeThread: AgentTool = {
         createdAt: c.createdAt.toISOString(),
         content: c.content,
       })),
+      organizationId: ctx.organizationId,
     })
   },
 }

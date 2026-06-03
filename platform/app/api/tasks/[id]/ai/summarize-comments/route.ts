@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
-import { summarizeComments, isAIConfigured } from '@/lib/ai'
+import { summarizeComments } from '@/lib/ai'
+import { isOrgAIConfigured } from '@/lib/anthropic'
 
 /**
  * POST /api/tasks/:id/ai/summarize-comments
@@ -12,9 +13,6 @@ import { summarizeComments, isAIConfigured } from '@/lib/ai'
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  if (!isAIConfigured()) {
-    return NextResponse.json({ error: 'AI is not configured on this server.' }, { status: 503 })
-  }
 
   const { id } = await params
 
@@ -24,6 +22,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
       title: true,
       project: {
         select: {
+          organizationId: true,
           workspace: {
             select: { members: { where: { userId: session.user.id }, select: { id: true } } },
           },
@@ -47,6 +46,11 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     })
   }
 
+  const orgId = task.project.organizationId
+  if (!(await isOrgAIConfigured(orgId))) {
+    return NextResponse.json({ error: 'AI is not configured on this server.' }, { status: 503 })
+  }
+
   try {
     const result = await summarizeComments({
       taskTitle: task.title,
@@ -55,6 +59,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
         createdAt: c.createdAt.toISOString(),
         content: c.content,
       })),
+      organizationId: orgId,
     })
     return NextResponse.json(result)
   } catch (err) {
