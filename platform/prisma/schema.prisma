@@ -51,6 +51,7 @@ model User {
   sessions        Session[]
   members         Membership[]
   msAccount       MicrosoftAccount?
+  googleAccount   GoogleAccount?
   activities      Activity[]
   notifications   Notification[]
   auditLogs       AuditLog[]        @relation("AuditActor")
@@ -115,6 +116,25 @@ model MicrosoftAccount {
   id                String    @id @default(cuid())
   userId            String    @unique
   msUserId          String
+  email             String?
+  displayName       String?
+  refreshTokenEnc   String
+  accessToken       String?
+  accessTokenExpiry DateTime?
+  scope             String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// Per-user Google Drive connection for file attachments. Mirrors
+// MicrosoftAccount; uses the existing AUTH_GOOGLE_ID/SECRET app with an added
+// drive.file scope (granted via a separate consent flow, not sign-in).
+model GoogleAccount {
+  id                String    @id @default(cuid())
+  userId            String    @unique
+  googleUserId      String
   email             String?
   displayName       String?
   refreshTokenEnc   String
@@ -784,7 +804,11 @@ model TaskAttachment {
   name         String
   size         Int
   mimeType     String?
-  msItemId     String
+  // Where the file lives: "onedrive" | "googledrive" | "link".
+  provider     String   @default("onedrive")
+  // Cloud item/file id (OneDrive item id or Google Drive file id). Null for
+  // "link" attachments (a pasted URL we reference rather than host).
+  msItemId     String?
   msDriveId    String?
   shareUrl     String
   thumbnailUrl String?
