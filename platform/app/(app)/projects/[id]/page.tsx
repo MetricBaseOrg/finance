@@ -1,5 +1,6 @@
 'use client'
-import { useState, useEffect, useCallback, use, useMemo } from 'react'
+import { useState, useEffect, useCallback, use, useMemo, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { format } from 'date-fns'
 import {
@@ -52,8 +53,9 @@ interface Project {
   milestones: { id: string; name: string; dueDate?: string | null }[]
 }
 
-export default function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
+function ProjectPageInner({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
+  const searchParams = useSearchParams()
   const { data: session } = useSession()
   const currentUserId = session?.user?.id
   const [project, setProject] = useState<Project | null>(null)
@@ -99,6 +101,14 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   }, [id])
 
   useEffect(() => { fetchProject() }, [fetchProject])
+
+  // Deep link: open a task's detail panel when arriving with ?task=<id> (used by
+  // global search and notification links). Works for subtasks too — TaskDetail
+  // fetches by id, so the task needn't be on the board.
+  useEffect(() => {
+    const taskParam = searchParams.get('task')
+    if (taskParam) setSelectedTaskId(taskParam)
+  }, [searchParams])
 
   const handleNewTask = (status = 'TODO') => {
     setNewTaskStatus(status)
@@ -336,5 +346,14 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
         onCreated={handleTaskCreated}
       />
     </div>
+  )
+}
+
+export default function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
+  // Suspense boundary required because ProjectPageInner reads useSearchParams().
+  return (
+    <Suspense fallback={null}>
+      <ProjectPageInner params={params} />
+    </Suspense>
   )
 }

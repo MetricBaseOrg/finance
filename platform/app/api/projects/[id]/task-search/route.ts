@@ -37,7 +37,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     where: {
       projectId,
       ...(exclude && { id: { not: exclude } }),
-      ...(q && { title: { contains: q } }),
+      // Postgres `contains` is case-sensitive by default; match regardless of case.
+      ...(q && { title: { contains: q, mode: 'insensitive' as const } }),
     },
     select: { id: true, title: true, status: true, priority: true, parentId: true },
     orderBy: { updatedAt: 'desc' },

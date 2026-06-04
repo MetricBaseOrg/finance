@@ -6,8 +6,8 @@ import { prisma } from '@/lib/prisma'
  * GET /api/search?q=foo
  *
  * Returns up to 30 mixed results across tasks, projects, and workspaces that
- * the current user can see. SQLite LIKE matching is good enough for now; for
- * Neon/Postgres we'd switch to full-text search.
+ * the current user can see. Postgres `contains` matching with case-insensitive
+ * mode is good enough for now; we'd switch to full-text search to scale.
  */
 export async function GET(req: Request) {
   const session = await auth()
@@ -20,8 +20,10 @@ export async function GET(req: Request) {
   if (qRaw.length < 1) {
     return NextResponse.json({ tasks: [], projects: [], workspaces: [] })
   }
-  // SQLite LIKE is case-insensitive for ASCII by default; we add wildcards.
+  // Postgres `contains` is case-SENSITIVE by default, so every filter below uses
+  // `mode: 'insensitive'` to match keywords regardless of capitalisation.
   const q = qRaw
+  const insensitive = { contains: q, mode: 'insensitive' as const }
   const userId = session.user.id
 
   // Workspaces the user is a member of — used to scope projects/tasks.
@@ -39,8 +41,8 @@ export async function GET(req: Request) {
       where: {
         project: { organizationId: { in: organizationIds } },
         OR: [
-          { title: { contains: q } },
-          { description: { contains: q } },
+          { title: insensitive },
+          { description: insensitive },
         ],
       },
       select: {
@@ -48,6 +50,8 @@ export async function GET(req: Request) {
         title: true,
         status: true,
         priority: true,
+        parentId: true,
+        parent: { select: { id: true, title: true } },
         project: { select: { id: true, name: true, color: true } },
       },
       take: 12,
@@ -57,8 +61,8 @@ export async function GET(req: Request) {
       where: {
         organizationId: { in: organizationIds },
         OR: [
-          { name: { contains: q } },
-          { description: { contains: q } },
+          { name: insensitive },
+          { description: insensitive },
         ],
       },
       select: {
@@ -75,8 +79,8 @@ export async function GET(req: Request) {
       where: {
         id: { in: organizationIds },
         OR: [
-          { name: { contains: q } },
-          { description: { contains: q } },
+          { name: insensitive },
+          { description: insensitive },
         ],
       },
       select: { id: true, name: true, color: true, slug: true },

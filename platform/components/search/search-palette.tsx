@@ -14,6 +14,8 @@ interface SearchResult {
     title: string
     status: string
     priority: string
+    parentId?: string | null
+    parent?: { id: string; title: string } | null
     project: { id: string; name: string; color: string }
   }>
   projects: Array<{
@@ -105,7 +107,7 @@ export function SearchPalette({ open, onClose }: { open: boolean; onClose: () =>
   const flatItems: FlatItem[] = useMemo(() => {
     const list: FlatItem[] = []
     for (const t of results.tasks) {
-      list.push({ kind: 'task', id: t.id, href: `/projects/${t.project.id}`, item: t })
+      list.push({ kind: 'task', id: t.id, href: `/projects/${t.project.id}?task=${t.id}`, item: t })
     }
     for (const p of results.projects) {
       list.push({ kind: 'project', id: p.id, href: `/projects/${p.id}`, item: p })
@@ -236,7 +238,7 @@ export function SearchPalette({ open, onClose }: { open: boolean; onClose: () =>
                     key={`task-${t.id}`}
                     data-search-idx={idx}
                     onMouseEnter={() => setActiveIndex(idx)}
-                    onClick={() => navigate(`/projects/${t.project.id}`)}
+                    onClick={() => navigate(`/projects/${t.project.id}?task=${t.id}`)}
                     className={cn(
                       'w-full flex items-center gap-3 px-4 py-2 text-left',
                       isActive
@@ -248,7 +250,13 @@ export function SearchPalette({ open, onClose }: { open: boolean; onClose: () =>
                     <div className={cn('w-2 h-2 rounded-full flex-shrink-0', STATUS_COLORS[t.status])} />
                     {PRIORITY_ICONS[t.priority as keyof typeof PRIORITY_ICONS]}
                     <span className="flex-1 min-w-0 text-sm text-gray-800 dark:text-slate-200 truncate">
+                      {t.parentId && <span className="text-gray-400 dark:text-slate-500 mr-1">↳</span>}
                       <Highlight text={t.title} query={query} />
+                      {t.parent && (
+                        <span className="text-xs text-gray-400 dark:text-slate-500 ml-1.5 truncate">
+                          in {t.parent.title}
+                        </span>
+                      )}
                     </span>
                     <span className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-slate-500 flex-shrink-0">
                       <div className="w-1.5 h-1.5 rounded-sm" style={{ backgroundColor: t.project.color }} />
