@@ -48,9 +48,10 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  // Only parent tasks count toward project progress (subtasks roll up via their parent)
+  // Count every task in the project — both top-level tasks and subtasks — so
+  // the curve reflects the full body of work, not just parent rows.
   const tasks = await prisma.task.findMany({
-    where: { projectId: id, parentId: null },
+    where: { projectId: id },
     select: {
       id: true,
       status: true,
@@ -108,28 +109,40 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   let end = latestDue > now ? latestDue : now
   end = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate()))
 
-  // Walk day-by-day. Cap at ~400 days so an absurdly long project doesn't
-  // produce a 5MB payload.
-  const MAX_DAYS = 400
+  // Always cover the full project range. Keep the point count bounded (~400)
+  // by widening the bucket step for long projects — daily for short ones,
+  // multi-day/weekly/monthly for multi-year ones — so the x-axis never gets
+  // truncated and the payload stays small.
+  const DAY_MS = 24 * 3600 * 1000
+  const MAX_POINTS = 400
   const totalMs = end.getTime() - start.getTime()
-  const totalDays = Math.min(Math.max(Math.floor(totalMs / (24 * 3600 * 1000)) + 1, 1), MAX_DAYS)
+  const totalDays = Math.max(Math.floor(totalMs / DAY_MS) + 1, 1)
+  const stepDays = Math.max(1, Math.ceil(totalDays / MAX_POINTS))
+  const numPoints = Math.max(1, Math.ceil(totalDays / stepDays))
 
   // Tasks without a dueDate aren't "planned" on any day — they're a constant
   // offset added once we hit the end of the range, so the planned and actual
   // curves can converge.
   const tasksWithoutDue = tasks.length - dueDates.length
 
+  const doneTimes = [...doneAtByTask.values()]
   const planned: Array<{ date: string; count: number }> = []
   const actual:  Array<{ date: string; count: number }> = []
-  for (let i = 0; i < totalDays; i++) {
-    const day = new Date(start.getTime() + i * 24 * 3600 * 1000)
+  for (let i = 0; i < numPoints; i++) {
+    // Pin the last bucket to the true range end so the planned curve reaches
+    // 100% — with multi-day steps the final sample can otherwise land before
+    // the end day and miss tasks due in that last interval.
+    const dayMs = i === numPoints - 1
+      ? end.getTime()
+      : Math.min(start.getTime() + i * stepDays * DAY_MS, end.getTime())
+    const day = new Date(dayMs)
     // End-of-day for "≤ day" semantics
-    const eod = new Date(day.getTime() + (24 * 3600 * 1000) - 1)
+    const eod = new Date(dayMs + DAY_MS - 1)
     const dueByThen = dueDates.filter(d => d <= eod).length
-    const doneByThen = [...doneAtByTask.values()].filter(d => d <= eod).length
+    const doneByThen = doneTimes.filter(d => d <= eod).length
     // Add the dueDate-less tasks proportionally near the end of the project
     // (linearly tail off the last 20% of the range).
-    const ramp = i / Math.max(totalDays - 1, 1)
+    const ramp = i / Math.max(numPoints - 1, 1)
     const extraPlanned = tasksWithoutDue > 0
       ? Math.round(tasksWithoutDue * Math.max(0, (ramp - 0.8) / 0.2))
       : 0

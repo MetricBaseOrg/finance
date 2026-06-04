@@ -65,16 +65,41 @@ export function SCurveView({ projectId }: { projectId: string }) {
     return { n, maxCount, xAt, yAt }
   }, [data, unit])
 
+  // Buckets may be coarser than daily (weekly/monthly for long projects), so
+  // map a target date to the nearest bucket rather than requiring an exact hit.
+  const nearestIdx = (target: string): number => {
+    if (!data || data.planned.length === 0) return -1
+    const t = parseISO(target).getTime()
+    let best = -1
+    let bestDiff = Infinity
+    for (let i = 0; i < data.planned.length; i++) {
+      const diff = Math.abs(parseISO(data.planned[i].date).getTime() - t)
+      if (diff < bestDiff) { bestDiff = diff; best = i }
+    }
+    return best
+  }
+
   const todayIdx = useMemo(() => {
     if (!data) return -1
-    return data.planned.findIndex(p => p.date === data.today)
+    const t = parseISO(data.today).getTime()
+    // Only show the TODAY marker if today actually falls within the range.
+    if (t < parseISO(data.rangeStart).getTime() || t > parseISO(data.rangeEnd).getTime()) return -1
+    return nearestIdx(data.today)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data])
 
   const milestoneIdx = useMemo(() => {
     if (!data) return [] as Array<{ ms: Milestone; idx: number }>
+    const lo = parseISO(data.rangeStart).getTime()
+    const hi = parseISO(data.rangeEnd).getTime()
     return data.milestones
-      .map(ms => ({ ms, idx: data.planned.findIndex(p => p.date === ms.dueDate) }))
+      .filter(ms => {
+        const d = parseISO(ms.dueDate).getTime()
+        return d >= lo && d <= hi
+      })
+      .map(ms => ({ ms, idx: nearestIdx(ms.dueDate) }))
       .filter(m => m.idx >= 0)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data])
 
   // Render a smooth-ish polyline from the points using path L commands
@@ -104,14 +129,17 @@ export function SCurveView({ projectId }: { projectId: string }) {
     return ticks
   }, [data, scale, unit])
 
-  // X-axis ticks: 4–6 evenly-spaced labels
+  // X-axis ticks: 4–6 evenly-spaced labels. Include the year on long ranges so
+  // multi-year projects aren't ambiguous (e.g. "Mar '24" vs "Mar '25").
   const xTicks = useMemo(() => {
     if (!data || !scale) return [] as Array<{ x: number; label: string }>
+    const spanDays = (parseISO(data.rangeEnd).getTime() - parseISO(data.rangeStart).getTime()) / (24 * 3600 * 1000)
+    const fmt = spanDays > 365 ? "MMM ''yy" : 'MMM d'
     const count = Math.min(6, Math.max(2, Math.floor(scale.n / 7)))
     const out: Array<{ x: number; label: string }> = []
     for (let i = 0; i < count; i++) {
       const idx = Math.round((i / (count - 1)) * (scale.n - 1))
-      out.push({ x: scale.xAt(idx), label: format(parseISO(data.planned[idx].date), 'MMM d') })
+      out.push({ x: scale.xAt(idx), label: format(parseISO(data.planned[idx].date), fmt) })
     }
     return out
   }, [data, scale])
