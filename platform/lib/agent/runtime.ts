@@ -1,6 +1,6 @@
 import type Anthropic from '@anthropic-ai/sdk'
 import { prisma } from '@/lib/prisma'
-import { getOrgAnthropic } from '@/lib/anthropic'
+import { AI_NOT_CONFIGURED_MSG, getOrgAnthropic } from '@/lib/anthropic'
 import { isRole } from '@/lib/permissions'
 import { buildSystemPrompt, buildTaskTriggerMessage, buildChatTriggerMessage } from '@/lib/agent/context'
 import { createComment } from '@/lib/comments/create'
@@ -38,7 +38,7 @@ export async function runAgentRun(runId: string): Promise<void> {
   // Resolve provider config for this workspace (org settings over env).
   const ai = await getOrgAnthropic(run.organizationId)
   if (!ai) {
-    await fail(runId, 'AI is not configured (no workspace key and ANTHROPIC_API_KEY missing).')
+    await fail(runId, AI_NOT_CONFIGURED_MSG)
     return
   }
   const client = ai.client

@@ -32,6 +32,14 @@ export function isAIConfigured(): boolean {
   return Boolean(process.env.ANTHROPIC_API_KEY)
 }
 
+/**
+ * User-facing message when an org has no usable AI config. AI is configured
+ * per-workspace (no platform-wide key), so point the user at the right place
+ * instead of implying a server outage.
+ */
+export const AI_NOT_CONFIGURED_MSG =
+  'AI isn’t set up for this workspace yet. An owner or admin can add an AI provider key in Settings → Agents.'
+
 export type ResolvedAi = { apiKey: string; baseUrl?: string; model: string; source: 'workspace' | 'env' }
 
 /** Resolve the effective AI config for an org: workspace settings over env. */

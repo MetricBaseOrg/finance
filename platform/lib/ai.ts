@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
-import { getOrgAnthropic } from './anthropic'
+import { AI_NOT_CONFIGURED_MSG, getOrgAnthropic } from './anthropic'
 
 /**
  * Thin wrapper around the Anthropic Messages API. The base URL is overrideable
@@ -35,7 +35,7 @@ export async function breakdownTask(params: {
   organizationId?: string | null
 }): Promise<{ subtasks: string[] }> {
   const ai = await getOrgAnthropic(params.organizationId)
-  if (!ai) throw new Error('AI is not configured (no workspace key and ANTHROPIC_API_KEY missing)')
+  if (!ai) throw new Error(AI_NOT_CONFIGURED_MSG)
 
   const c = ai.client
   const model = ai.model
@@ -109,7 +109,7 @@ export async function summarizeComments(params: {
   organizationId?: string | null
 }): Promise<{ tldr: string[]; openQuestions: string[]; decisions: string[] }> {
   const ai = await getOrgAnthropic(params.organizationId)
-  if (!ai) throw new Error('AI is not configured (no workspace key and ANTHROPIC_API_KEY missing)')
+  if (!ai) throw new Error(AI_NOT_CONFIGURED_MSG)
 
   const c = ai.client
   const model = ai.model

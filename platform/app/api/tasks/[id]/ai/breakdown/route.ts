@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { breakdownTask } from '@/lib/ai'
-import { isOrgAIConfigured } from '@/lib/anthropic'
+import { AI_NOT_CONFIGURED_MSG, isOrgAIConfigured } from '@/lib/anthropic'
 
 /**
  * POST /api/tasks/:id/ai/breakdown
@@ -39,7 +39,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
 
   const orgId = task.project.organizationId
   if (!(await isOrgAIConfigured(orgId))) {
-    return NextResponse.json({ error: 'AI is not configured on this server.' }, { status: 503 })
+    return NextResponse.json({ error: AI_NOT_CONFIGURED_MSG }, { status: 503 })
   }
 
   try {
