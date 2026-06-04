@@ -26,7 +26,7 @@ export async function notifyApprovers(opts: {
   // emails, and never notify the submitter themselves.
   const approvers = await prisma.membership.findMany({
     where: { organizationId: opts.organizationId, role: { in: ['OWNER', 'ADMIN'] } },
-    select: { user: { select: { id: true, email: true, kind: true } } },
+    select: { user: { select: { id: true, email: true, kind: true, emailNotifications: true } } },
   })
   const recipients = approvers
     .map((m) => m.user)
@@ -48,7 +48,11 @@ export async function notifyApprovers(opts: {
     })),
   })
 
-  const emails = recipients.map((u) => u.email).filter(Boolean) as string[]
+  // In-app records go to everyone; email only to those who haven't muted it.
+  const emails = recipients
+    .filter((u) => u.emailNotifications)
+    .map((u) => u.email)
+    .filter(Boolean) as string[]
   if (emails.length === 0) return
   const subject = `Approval needed: ${opts.actorName} submitted a transaction`
   const html = `<p><strong>${escapeHtml(opts.actorName)}</strong> submitted ${escapeHtml(opts.detail)} for approval.</p>
@@ -75,7 +79,7 @@ export async function notifyTransactionDecision(opts: {
 
   const user = await prisma.user.findUnique({
     where: { id: opts.recipientUserId },
-    select: { email: true, kind: true },
+    select: { email: true, kind: true, emailNotifications: true },
   })
   if (!user || user.kind === 'AGENT') return
 
@@ -94,7 +98,8 @@ export async function notifyTransactionDecision(opts: {
     },
   })
 
-  if (!user.email) return
+  // In-app record above always fires; email respects the recipient's toggle.
+  if (!user.email || !user.emailNotifications) return
   const subject = `Transaction ${verb}`
   const html = `<p>Your transaction <strong>${escapeHtml(opts.detail)}</strong> was ${verb} by ${escapeHtml(opts.approverName)}.</p>
 <p><a href="${url}">View transactions →</a></p>`

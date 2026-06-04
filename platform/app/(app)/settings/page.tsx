@@ -4,6 +4,7 @@ import { SettingsView } from './SettingsView'
 import { ProfileForm } from './ProfileForm'
 import { TelegramConnect } from './TelegramConnect'
 import { ChangePasswordForm } from './ChangePasswordForm'
+import { NotificationPrefsForm } from './NotificationPrefsForm'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,6 +15,7 @@ export default async function SettingsPage() {
     select: {
       name: true, email: true, title: true, bio: true, image: true, password: true,
       telegramUserId: true, telegramUsername: true, telegramLinkedAt: true,
+      emailNotifications: true, dailyDigest: true,
     },
   })
   return (
@@ -50,6 +52,14 @@ export default async function SettingsPage() {
         />
       }
       changePasswordForm={<ChangePasswordForm hasPassword={!!profile?.password} />}
+      notificationPrefsForm={
+        <NotificationPrefsForm
+          initial={{
+            emailNotifications: profile?.emailNotifications ?? true,
+            dailyDigest: profile?.dailyDigest ?? true,
+          }}
+        />
+      }
     />
   )
 }

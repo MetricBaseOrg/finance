@@ -66,7 +66,7 @@ export async function sendInstantEmail(opts: InstantOpts) {
     const [recipient, actor, task] = await Promise.all([
       prisma.user.findUnique({
         where: { id: opts.recipientUserId },
-        select: { email: true, name: true },
+        select: { email: true, name: true, emailNotifications: true },
       }),
       prisma.user.findUnique({
         where: { id: opts.actorId },
@@ -78,6 +78,8 @@ export async function sendInstantEmail(opts: InstantOpts) {
       }),
     ])
     if (!recipient?.email || !task) return
+    // Respect the recipient's master email switch (Settings → Preferences).
+    if (!recipient.emailNotifications) return
     const actorName = actor?.name || actor?.email || 'Someone'
     const subject = subjectFor(opts.kind, actorName, task.title)
     const url = `${APP_URL}/projects/${task.projectId}`
@@ -168,9 +170,13 @@ export async function sendDigests(opts: { instantWindowMinutes?: number } = {}):
   for (const [userId, items] of byUser) {
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { email: true, name: true },
+      select: { email: true, name: true, emailNotifications: true, dailyDigest: true },
     })
     if (!user?.email) continue
+    // Honour preferences: the digest needs both the master email switch and the
+    // digest toggle on. Skip silently and leave the notifications un-stamped so
+    // they remain eligible for the in-app bell (and a future digest if re-enabled).
+    if (!user.emailNotifications || !user.dailyDigest) continue
 
     const rows = items.map(n => ({
       id: n.id,

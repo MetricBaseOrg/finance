@@ -42,6 +42,23 @@ export async function updateProfile(
   return { ok: true, name: parsed.data.name, image };
 }
 
+/** Persist the signed-in user's notification preferences (Settings → Preferences). */
+export async function updateNotificationPrefs(opts: {
+  emailNotifications: boolean;
+  dailyDigest: boolean;
+}): Promise<{ ok: boolean }> {
+  const user = await requireUser();
+  await db.user.update({
+    where: { id: user.id },
+    data: {
+      emailNotifications: !!opts.emailNotifications,
+      dailyDigest: !!opts.dailyDigest,
+    },
+  });
+  revalidatePath("/settings");
+  return { ok: true };
+}
+
 export type ChangePasswordState = { error?: string; ok?: boolean };
 
 /** Set or change the signed-in user's password. */

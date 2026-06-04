@@ -33,6 +33,12 @@ model User {
   // Account status: "ACTIVE" | "SUSPENDED". Suspended users cannot sign in and
   // any live session is bounced to sign-in.
   status              String    @default("ACTIVE")
+  // Notification preferences (Settings → Preferences). `emailNotifications` is
+  // the master switch for all outbound email (instant + digest); `dailyDigest`
+  // gates the daily summary specifically. Both default on to preserve the
+  // behaviour that predated the toggles.
+  emailNotifications  Boolean   @default(true) @map("email_notifications")
+  dailyDigest         Boolean   @default(true) @map("daily_digest")
   // Telegram bot linking — set only after a verified /start <code> handshake.
   telegramUserId      BigInt?   @unique @map("telegram_user_id")
   telegramUsername    String?   @map("telegram_username")

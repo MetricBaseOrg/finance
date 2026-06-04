@@ -1,6 +1,5 @@
 'use client'
 
-import { useState } from 'react'
 import { MessageSquare } from 'lucide-react'
 import { AppTile, Pill, SectionHead, Btn, Icon, type AppId } from '@/app/home/ui'
 import { APP_IDS, APP_META, canAccessApp, trialState, type AppAccessId } from '@/lib/apps'
@@ -18,15 +17,6 @@ const APP_TAGLINE: Record<AppAccessId, string> = {
   chat: 'Team channels & direct messages',
 }
 
-function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <button onClick={() => onChange(!on)} className="ws-btn"
-      style={{ width: 38, height: 22, borderRadius: 999, border: 'none', padding: 2, background: on ? 'var(--mb-brand)' : 'var(--mb-border-strong)', display: 'inline-flex' }}>
-      <span style={{ width: 18, height: 18, borderRadius: '50%', background: '#fff', transform: on ? 'translateX(16px)' : 'translateX(0)', transition: 'transform .18s' }} />
-    </button>
-  )
-}
-
 function Row({ label, sub, children, last }: { label: string; sub?: string; children: React.ReactNode; last?: boolean }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, padding: '14px 16px', borderBottom: last ? 'none' : '1px solid var(--mb-divider)' }}>
@@ -39,13 +29,12 @@ function Row({ label, sub, children, last }: { label: string; sub?: string; chil
   )
 }
 
-export function SettingsView({ role, orgName, orgCount, appAccess, trialEndsAt, isSuperAdmin, profileForm, telegramConnect, changePasswordForm }: {
+export function SettingsView({ role, orgName, orgCount, appAccess, trialEndsAt, isSuperAdmin, profileForm, telegramConnect, changePasswordForm, notificationPrefsForm }: {
   userName?: string; email?: string; role: string; orgName: string; orgCount: number
   appAccess: string[]; trialEndsAt: string | null; isSuperAdmin: boolean
   profileForm?: React.ReactNode; telegramConnect?: React.ReactNode; changePasswordForm?: React.ReactNode
+  notificationPrefsForm?: React.ReactNode
 }) {
-  const [notif, setNotif] = useState(true)
-  const [digest, setDigest] = useState(false)
   const trial = trialState(trialEndsAt)
 
   return (
@@ -69,10 +58,7 @@ export function SettingsView({ role, orgName, orgCount, appAccess, trialEndsAt, 
 
       {/* preferences */}
       <SectionHead eyebrow="Preferences" title="Notifications" />
-      <div className="ws-card" style={{ marginBottom: 18 }}>
-        <Row label="Email notifications" sub="Task assignments and alerts across all apps"><Toggle on={notif} onChange={setNotif} /></Row>
-        <Row label="Daily digest" sub="A morning summary of cross-app activity" last><Toggle on={digest} onChange={setDigest} /></Row>
-      </div>
+      {notificationPrefsForm}
 
       {/* connected apps + trial / access status */}
       <SectionHead eyebrow="Access" title="Connected apps" sub="Your app access in this workspace" />

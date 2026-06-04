@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
-import { prisma } from '@/lib/prisma'
-import { extractMentionHandles, logActivity, notify, resolveMentions } from '@/lib/activity'
+import { createComment } from '@/lib/comments/create'
 import { can, getRole, getWorkspaceForTask } from '@/lib/permissions'
 
 export async function POST(req: Request) {
@@ -19,67 +18,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Your role does not permit commenting.' }, { status: 403 })
   }
 
-  const comment = await prisma.comment.create({
-    data: { content, taskId, userId },
-    include: { user: { select: { id: true, name: true, email: true, image: true } } },
-  })
-
-  // Log activity for the timeline
-  await logActivity({
-    taskId,
-    userId,
-    kind: 'comment.added',
-    metadata: { commentId: comment.id, preview: content.slice(0, 120) },
-  })
-
-  // Resolve @mentions against the workspace members and fan out notifications
-  const handles = extractMentionHandles(content)
-  if (handles.length > 0) {
-    // Walk task → project → workspace → members
-    const task = await prisma.task.findUnique({
-      where: { id: taskId },
-      select: {
-        title: true,
-        assigneeId: true,
-        project: {
-          select: {
-            workspace: {
-              select: {
-                members: {
-                  select: {
-                    user: { select: { id: true, name: true, email: true } },
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-    })
-    const members = task?.project.workspace.members || []
-    const mentionedIds = resolveMentions(handles, members)
-    if (mentionedIds.length > 0) {
-      await notify({
-        userIds: mentionedIds,
-        kind: 'mention',
-        actorId: userId,
-        taskId,
-        commentId: comment.id,
-        metadata: { taskTitle: task?.title, preview: content.slice(0, 120) },
-      })
-    }
-    // Also notify the assignee (if not the actor and not already mentioned)
-    if (task?.assigneeId && task.assigneeId !== userId && !mentionedIds.includes(task.assigneeId)) {
-      await notify({
-        userIds: [task.assigneeId],
-        kind: 'comment.added',
-        actorId: userId,
-        taskId,
-        commentId: comment.id,
-        metadata: { taskTitle: task.title, preview: content.slice(0, 120) },
-      })
-    }
-  }
+  // Delegate to the shared service so the HTTP and agent paths stay in lockstep:
+  // it logs activity, resolves @mentions, and notifies the assignee on every
+  // comment (not only when there's a mention).
+  const comment = await createComment({ taskId, actorUserId: userId, content })
 
   return NextResponse.json(comment)
 }
