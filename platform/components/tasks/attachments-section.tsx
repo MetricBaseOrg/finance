@@ -107,6 +107,18 @@ export function AttachmentsSection({ taskId }: { taskId: string }) {
     : providers.onedrive.connected ? 'onedrive'
     : 'googledrive'
 
+  // After the OAuth round-trip, bounce the user back to *this* task's detail
+  // panel — keep the current path, pin ?task=<id> so the panel reopens, and drop
+  // the provider success params so we don't carry a stale flag.
+  const connectReturnTo = () => {
+    if (typeof window === 'undefined') return encodeURIComponent(`?task=${taskId}`)
+    const u = new URL(window.location.href)
+    u.searchParams.set('task', taskId)
+    u.searchParams.delete('onedrive')
+    u.searchParams.delete('gdrive')
+    return encodeURIComponent(u.pathname + u.search)
+  }
+
   const upload = useCallback(async (file: File) => {
     if (file.size === 0) {
       toast.error('Empty file')
@@ -218,7 +230,7 @@ export function AttachmentsSection({ taskId }: { taskId: string }) {
           </button>
           {providers.onedrive.configured && !providers.onedrive.connected && (
             <a
-              href={`/api/onedrive/auth?returnTo=${encodeURIComponent(window.location.pathname)}`}
+              href={`/api/onedrive/auth?returnTo=${connectReturnTo()}`}
               className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
             >
               <Cloud className="h-3 w-3" /> Connect OneDrive
@@ -226,7 +238,7 @@ export function AttachmentsSection({ taskId }: { taskId: string }) {
           )}
           {providers.googledrive.configured && !providers.googledrive.connected && (
             <a
-              href={`/api/googledrive/auth?returnTo=${encodeURIComponent(window.location.pathname)}`}
+              href={`/api/googledrive/auth?returnTo=${connectReturnTo()}`}
               className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
             >
               <Cloud className="h-3 w-3" /> Connect Google Drive

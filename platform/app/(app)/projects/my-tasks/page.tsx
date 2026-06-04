@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { CheckSquare, Check, ChevronDown, ChevronRight } from 'lucide-react'
 import { formatWhen } from '@/lib/tasks/when'
@@ -38,8 +39,9 @@ const STATUS_BG: Record<string, string> = {
   CANCELLED:   'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400',
 }
 
-export default function MyTasksPage() {
+function MyTasksInner() {
   const { data: session } = useSession()
+  const searchParams = useSearchParams()
   const [tasks, setTasks] = useState<Task[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
@@ -56,6 +58,13 @@ export default function MyTasksPage() {
       return next
     })
   }
+
+  // Deep link: open a task's detail panel when arriving with ?task=<id> (e.g.
+  // the bounce back from connecting OneDrive / Google Drive, or global search).
+  useEffect(() => {
+    const taskParam = searchParams.get('task')
+    if (taskParam) setSelectedTaskId(taskParam)
+  }, [searchParams])
 
   // Fetch user's role from their workspaces
   useEffect(() => {
@@ -365,5 +374,14 @@ export default function MyTasksPage() {
         onDeleted={handleTaskDeleted}
       />
     </div>
+  )
+}
+
+export default function MyTasksPage() {
+  // Suspense boundary required because MyTasksInner reads useSearchParams().
+  return (
+    <Suspense fallback={null}>
+      <MyTasksInner />
+    </Suspense>
   )
 }
