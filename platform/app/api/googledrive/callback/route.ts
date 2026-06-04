@@ -10,8 +10,12 @@ import { completeOAuth } from '@/lib/googledrive'
  * the user back to where they came from.
  */
 export async function GET(req: Request) {
+  // Redirects must target the PUBLIC origin (APP_URL), not req.url — behind the
+  // reverse proxy / tunnel req.url is the internal container host.
+  const base = process.env.APP_URL || new URL(req.url).origin
+
   const session = await auth()
-  if (!session?.user?.id) return NextResponse.redirect(new URL('/auth/signin', req.url))
+  if (!session?.user?.id) return NextResponse.redirect(new URL('/auth/signin', base))
 
   const url = new URL(req.url)
   const code = url.searchParams.get('code')
@@ -19,10 +23,10 @@ export async function GET(req: Request) {
   const error = url.searchParams.get('error')
 
   if (error) {
-    return NextResponse.redirect(new URL(`/dashboard?gdrive=error&msg=${encodeURIComponent(error)}`, req.url))
+    return NextResponse.redirect(new URL(`/dashboard?gdrive=error&msg=${encodeURIComponent(error)}`, base))
   }
   if (!code) {
-    return NextResponse.redirect(new URL('/dashboard?gdrive=error&msg=missing+code', req.url))
+    return NextResponse.redirect(new URL('/dashboard?gdrive=error&msg=missing+code', base))
   }
 
   const [nonce, returnToB64] = state.split('.', 2)
@@ -33,7 +37,7 @@ export async function GET(req: Request) {
     ?.split('=')[1]
 
   if (!nonce || !cookieNonce || nonce !== cookieNonce) {
-    return NextResponse.redirect(new URL('/dashboard?gdrive=error&msg=invalid+state', req.url))
+    return NextResponse.redirect(new URL('/dashboard?gdrive=error&msg=invalid+state', base))
   }
 
   let returnTo = '/dashboard'
@@ -47,10 +51,10 @@ export async function GET(req: Request) {
   } catch (err) {
     console.error('Google Drive callback error', err)
     const msg = err instanceof Error ? err.message : 'unknown'
-    return NextResponse.redirect(new URL(`/dashboard?gdrive=error&msg=${encodeURIComponent(msg)}`, req.url))
+    return NextResponse.redirect(new URL(`/dashboard?gdrive=error&msg=${encodeURIComponent(msg)}`, base))
   }
 
-  const res = NextResponse.redirect(new URL(`${returnTo}${returnTo.includes('?') ? '&' : '?'}gdrive=connected`, req.url))
+  const res = NextResponse.redirect(new URL(`${returnTo}${returnTo.includes('?') ? '&' : '?'}gdrive=connected`, base))
   res.cookies.set('gdrive_oauth_state', '', { path: '/', maxAge: 0 })
   return res
 }

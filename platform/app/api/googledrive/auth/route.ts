@@ -11,7 +11,9 @@ import { randomBytes } from 'crypto'
  */
 export async function GET(req: Request) {
   const session = await auth()
-  if (!session?.user?.id) return NextResponse.redirect(new URL('/auth/signin', req.url))
+  if (!session?.user?.id) {
+    return NextResponse.redirect(new URL('/auth/signin', process.env.APP_URL || new URL(req.url).origin))
+  }
   if (!isConfigured()) {
     return NextResponse.json(
       { error: 'Google Drive integration is not configured on this server (AUTH_GOOGLE_ID / AUTH_GOOGLE_SECRET missing).' },
