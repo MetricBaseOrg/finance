@@ -53,7 +53,7 @@ export default async function DashboardPage({
         : "down";
 
   return (
-    <div className="flex flex-col gap-8 max-w-[1240px]">
+    <div className="flex flex-col gap-8 max-w-[1240px] mx-auto w-full">
       <header className="flex flex-col gap-3">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div className="flex flex-col gap-2">

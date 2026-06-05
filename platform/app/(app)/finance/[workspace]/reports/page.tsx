@@ -10,7 +10,7 @@ export default async function ReportsIndex({
   const { workspace: slug } = await params;
   await requireMembership(slug);
   return (
-    <div className="flex flex-col gap-8 max-w-[1240px]">
+    <div className="flex flex-col gap-8 max-w-[1240px] mx-auto w-full">
       <header>
         <Eyebrow>Reports</Eyebrow>
         <h1 className="font-sans text-2xl sm:text-3xl font-extrabold text-white mt-2">

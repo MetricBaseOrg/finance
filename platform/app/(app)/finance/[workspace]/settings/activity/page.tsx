@@ -85,7 +85,7 @@ export default async function ActivityPage({
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
-    <div className="flex flex-col gap-8 max-w-[1240px]">
+    <div className="flex flex-col gap-8 max-w-[1240px] mx-auto w-full">
       <Link
         href={`/finance/${slug}/dashboard`}
         className="font-mono rounded-lg text-[11px] uppercase tracking-[0.18em] text-gray-2 hover:text-gold transition-colors self-start"

@@ -21,7 +21,7 @@ export default async function CategoriesPage({
   const expense = cats.filter((c) => c.kind === "EXPENSE");
 
   return (
-    <div className="flex flex-col gap-8 max-w-[1240px]">
+    <div className="flex flex-col gap-8 max-w-[1240px] mx-auto w-full">
       <header>
         <Eyebrow>Settings</Eyebrow>
         <h1 className="font-sans text-2xl sm:text-3xl font-extrabold text-white mt-2">

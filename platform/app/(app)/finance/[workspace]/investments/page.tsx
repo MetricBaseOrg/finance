@@ -38,7 +38,7 @@ export default async function InvestmentsPage({
 
   if (brokerageAccounts.length === 0) {
     return (
-      <div className="flex flex-col gap-8 max-w-[1240px]">
+      <div className="flex flex-col gap-8 max-w-[1240px] mx-auto w-full">
         <header>
           <Eyebrow>Investments</Eyebrow>
           <h1 className="font-sans text-2xl sm:text-3xl font-extrabold text-white mt-2">

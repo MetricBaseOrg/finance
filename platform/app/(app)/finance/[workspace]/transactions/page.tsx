@@ -51,7 +51,7 @@ export default async function TransactionsPage({
 
   if (accounts.length === 0) {
     return (
-      <div className="flex flex-col gap-8 max-w-[1240px]">
+      <div className="flex flex-col gap-8 max-w-[1240px] mx-auto w-full">
         <header>
           <Eyebrow>Transactions</Eyebrow>
           <h1 className="font-sans text-2xl sm:text-3xl font-extrabold text-white mt-2">
@@ -112,7 +112,7 @@ export default async function TransactionsPage({
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
-    <div className="flex flex-col gap-8 max-w-[1240px]">
+    <div className="flex flex-col gap-8 max-w-[1240px] mx-auto w-full">
       <header className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
           <Eyebrow>Transactions</Eyebrow>

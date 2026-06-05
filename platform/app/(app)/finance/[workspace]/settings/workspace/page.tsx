@@ -15,7 +15,7 @@ export default async function WorkspaceSettingsPage({
     where: { organizationId: workspace.id },
   });
   return (
-    <div className="flex flex-col gap-8 max-w-2xl">
+    <div className="flex flex-col gap-8 max-w-2xl mx-auto w-full">
       <Link
         href={`/finance/${slug}/dashboard`}
         className="font-mono rounded-lg text-[11px] uppercase tracking-[0.18em] text-gray-2 hover:text-gold transition-colors self-start"

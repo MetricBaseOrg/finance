@@ -21,7 +21,7 @@ export default async function BalanceSheetPage({
   const report = await buildBalanceSheet(workspace.id, asOf);
 
   return (
-    <div className="flex flex-col gap-8 max-w-[1240px]">
+    <div className="flex flex-col gap-8 max-w-[1240px] mx-auto w-full">
       <header className="flex flex-col gap-2">
         <Eyebrow>Reports · Balance sheet</Eyebrow>
         <h1 className="font-sans text-2xl sm:text-3xl font-extrabold text-white">

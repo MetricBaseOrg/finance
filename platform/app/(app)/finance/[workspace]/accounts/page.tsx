@@ -30,7 +30,7 @@ export default async function AccountsPage({
   const archived = accounts.filter((a) => a.archivedAt);
 
   return (
-    <div className="flex flex-col gap-8 max-w-[1240px]">
+    <div className="flex flex-col gap-8 max-w-[1240px] mx-auto w-full">
       <header className="flex items-end justify-between">
         <div>
           <Eyebrow>Accounts</Eyebrow>

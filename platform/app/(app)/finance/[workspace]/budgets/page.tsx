@@ -19,7 +19,7 @@ export default async function BudgetsPage({
   const income = rows.filter((r) => r.kind === "INCOME");
 
   return (
-    <div className="flex flex-col gap-8 max-w-[1240px]">
+    <div className="flex flex-col gap-8 max-w-[1240px] mx-auto w-full">
       <header className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-3">
         <div>
           <Eyebrow>Budgets</Eyebrow>
