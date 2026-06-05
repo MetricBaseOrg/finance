@@ -108,7 +108,6 @@ export default async function ProfilePage({ params }: { params: Promise<{ id: st
           select: { id: true, title: true, status: true, project: { select: { id: true, name: true } } },
         }),
       ])
-      // Resolve titles/projects for the tasks referenced by runs.
       const runTaskIds = [...new Set(runs.map((r) => r.taskId).filter((x): x is string => !!x))]
       const refRows = runTaskIds.length
         ? await db.task.findMany({ where: { id: { in: runTaskIds }, project: { organizationId: { in: viewerOrgIds } } }, select: { id: true, title: true, projectId: true } })
@@ -120,6 +119,33 @@ export default async function ProfilePage({ params }: { params: Promise<{ id: st
         runs,
         runTasks: new Map(refRows.map((t) => [t.id, { title: t.title, projectId: t.projectId }])),
       }
+    }
+  }
+
+  // Human user: same assigned-task list + recent TaskActivity feed.
+  let humanData: null | {
+    tasks: { id: string; title: string; status: string; projectId: string; projectName: string }[]
+    activity: { id: string; kind: string; createdAt: Date; task: { id: string; title: string; projectId: string; projectName: string } }[]
+  } = null
+
+  if (!isAgent) {
+    const [tasks, activity] = await Promise.all([
+      db.task.findMany({
+        where: { assigneeId: target.id, status: { notIn: ['DONE', 'CANCELLED'] }, project: { organizationId: { in: viewerOrgIds } } },
+        orderBy: [{ dueDate: { sort: 'asc', nulls: 'last' } }, { createdAt: 'desc' }],
+        take: 8,
+        select: { id: true, title: true, status: true, project: { select: { id: true, name: true } } },
+      }),
+      db.taskActivity.findMany({
+        where: { userId: target.id, task: { project: { organizationId: { in: viewerOrgIds } } } },
+        orderBy: { createdAt: 'desc' },
+        take: 12,
+        select: { id: true, kind: true, createdAt: true, task: { select: { id: true, title: true, project: { select: { id: true, name: true } } } } },
+      }),
+    ])
+    humanData = {
+      tasks: tasks.map((t) => ({ id: t.id, title: t.title, status: t.status, projectId: t.project.id, projectName: t.project.name })),
+      activity: activity.map((a) => ({ id: a.id, kind: a.kind, createdAt: a.createdAt, task: { id: a.task.id, title: a.task.title, projectId: a.task.project.id, projectName: a.task.project.name } })),
     }
   }
 
@@ -229,6 +255,53 @@ export default async function ProfilePage({ params }: { params: Promise<{ id: st
                       {r.error && <div style={{ fontSize: 11, color: '#c0564e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.error}</div>}
                     </div>
                     <span style={{ fontSize: 11, color: 'var(--mb-ink-muted)', flexShrink: 0, textAlign: 'right' }}>{meta}</span>
+                  </div>
+                )
+              })
+            )}
+          </div>
+        </>
+      )}
+
+      {humanData && (
+        <>
+          <div className="ws-card" style={{ marginTop: 12, padding: 16 }}>
+            <div style={sectionLabel}>Assigned tasks</div>
+            {humanData.tasks.length === 0 ? (
+              <span style={{ fontSize: 12.5, color: 'var(--mb-ink-muted)' }}>No open tasks assigned.</span>
+            ) : (
+              humanData.tasks.map((t) => (
+                <Link key={t.id} href={`/projects/${t.projectId}?task=${t.id}`} style={rowLink}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                    <span className={STATUS_COLORS[t.status] ?? 'bg-gray-400'} style={{ width: 8, height: 8, borderRadius: '50%', flexShrink: 0, display: 'inline-block' }} />
+                    <span style={{ fontSize: 13, color: 'var(--mb-ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.title}</span>
+                  </span>
+                  <span style={{ fontSize: 11, color: 'var(--mb-ink-muted)', flexShrink: 0 }}>{STATUS_LABELS[t.status] ?? t.status} · {t.projectName}</span>
+                </Link>
+              ))
+            )}
+          </div>
+
+          <div className="ws-card" style={{ marginTop: 12, padding: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 6 }}>
+              <div style={{ ...sectionLabel, marginBottom: 0 }}>Recent activity</div>
+              <RefreshButton />
+            </div>
+            {humanData.activity.length === 0 ? (
+              <span style={{ fontSize: 12.5, color: 'var(--mb-ink-muted)' }}>No activity yet.</span>
+            ) : (
+              humanData.activity.map((a) => {
+                const label = a.kind.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+                return (
+                  <div key={a.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '9px 0', borderTop: '1px solid var(--mb-divider)' }}>
+                    <span style={{ ...runPill, background: 'rgba(99,102,241,0.12)', color: '#6366f1' }}>{label}</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <Link href={`/projects/${a.task.projectId}?task=${a.task.id}`} style={{ fontSize: 12.5, color: 'var(--mb-ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', textDecoration: 'none' }}>
+                        {a.task.title}
+                      </Link>
+                      <div style={{ fontSize: 11, color: 'var(--mb-ink-muted)' }}>{a.task.projectName}</div>
+                    </div>
+                    <span style={{ fontSize: 11, color: 'var(--mb-ink-muted)', flexShrink: 0 }}>{relTime(a.createdAt)}</span>
                   </div>
                 )
               })

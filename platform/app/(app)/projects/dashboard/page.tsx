@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { format } from 'date-fns'
 import { FolderKanban, CheckSquare, AlertCircle, TrendingUp, Calendar, ArrowRight, Plus } from 'lucide-react'
 import { cn, STATUS_COLORS, STATUS_LABELS, PRIORITY_BG } from '@/lib/utils'
+import { PerformancePanel } from '@/components/projects/performance-panel'
 
 interface Project {
   id: string
@@ -75,7 +76,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto pb-[calc(1rem+env(safe-area-inset-bottom))]">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto w-full min-w-0 overflow-x-hidden pb-[calc(1rem+env(safe-area-inset-bottom))]">
       {/* Greeting */}
       <div className="mb-6 sm:mb-8">
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-1">
@@ -104,9 +105,12 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-4 sm:gap-6">
+      {/* Performance metrics */}
+      <PerformancePanel />
+
+      <div className="grid lg:grid-cols-2 gap-4 sm:gap-6 min-w-0">
         {/* My tasks */}
-        <div className="bg-bg-card rounded-xl border border-line p-4 sm:p-6">
+        <div className="bg-bg-card rounded-xl border border-line p-4 sm:p-6 min-w-0">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-semibold text-gray-1">My Tasks</h2>
             <Link href="/projects/my-tasks" className="text-xs text-indigo-600 hover:text-indigo-800 flex items-center gap-1">
@@ -120,10 +124,10 @@ export default function DashboardPage() {
               {myTasks.slice(0, 6).map(task => (
                 <div key={task.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-bg-hover transition-colors">
                   <div className={cn('w-2 h-2 rounded-full flex-shrink-0', STATUS_COLORS[task.status])} />
-                  <span className="text-sm text-gray-1 flex-1 truncate">{task.title}</span>
+                  <span className="text-sm text-gray-1 flex-1 min-w-0 truncate">{task.title}</span>
                   {task.dueDate && (
                     <span className={cn(
-                      'text-xs flex-shrink-0',
+                      'text-xs flex-shrink-0 whitespace-nowrap',
                       new Date(task.dueDate) < new Date() && task.status !== 'DONE'
                         ? 'text-red-500 font-medium'
                         : 'text-gray-3'
@@ -138,7 +142,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Projects */}
-        <div className="bg-bg-card rounded-xl border border-line p-4 sm:p-6">
+        <div className="bg-bg-card rounded-xl border border-line p-4 sm:p-6 min-w-0">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-semibold text-gray-1">Projects</h2>
           </div>
@@ -157,9 +161,9 @@ export default function DashboardPage() {
                   <div className="w-7 h-7 rounded-lg flex items-center justify-center text-white text-xs font-bold flex-shrink-0" style={{ backgroundColor: project.color }}>
                     {project.name[0].toUpperCase()}
                   </div>
-                  <span className="text-sm text-gray-1 flex-1 font-medium group-hover:text-indigo-600 transition-colors">{project.name}</span>
-                  <span className="text-xs text-gray-3">{project._count.tasks} tasks</span>
-                  <ArrowRight className="h-3.5 w-3.5 text-gray-4 group-hover:text-indigo-600 transition-colors" />
+                  <span className="text-sm text-gray-1 flex-1 min-w-0 truncate font-medium group-hover:text-indigo-600 transition-colors">{project.name}</span>
+                  <span className="text-xs text-gray-3 flex-shrink-0 whitespace-nowrap">{project._count.tasks} tasks</span>
+                  <ArrowRight className="h-3.5 w-3.5 text-gray-4 group-hover:text-indigo-600 transition-colors flex-shrink-0" />
                 </Link>
               ))}
             </div>
@@ -178,8 +182,8 @@ export default function DashboardPage() {
             {overdueTasks.map(task => (
               <div key={task.id} className="flex items-center gap-3 py-1">
                 <div className={cn('w-2 h-2 rounded-full flex-shrink-0', STATUS_COLORS[task.status])} />
-                <span className="text-sm text-[var(--down)] font-medium flex-1">{task.title}</span>
-                <span className="text-xs text-red-500">
+                <span className="text-sm text-[var(--down)] font-medium flex-1 min-w-0 truncate">{task.title}</span>
+                <span className="text-xs text-red-500 flex-shrink-0 whitespace-nowrap">
                   Due {format(new Date(task.dueDate!), 'MMM d')}
                 </span>
               </div>

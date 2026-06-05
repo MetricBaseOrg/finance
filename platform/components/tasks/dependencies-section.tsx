@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Link2, X, Plus, Search, AlertCircle, Check, Loader2 } from 'lucide-react'
+import { Link2, X, Plus, Search, AlertCircle, Check, Loader2, Pencil } from 'lucide-react'
 import { cn, STATUS_COLORS, STATUS_LABELS } from '@/lib/utils'
 import toast from 'react-hot-toast'
 
@@ -45,6 +45,8 @@ export function DependenciesSection({
   const [blockedBy, setBlockedBy] = useState<Dependency[]>(initial?.blockedBy || [])
   const [blocking, setBlocking] = useState<Dependency[]>(initial?.blocking || [])
   const [picker, setPicker] = useState<null | 'blockedBy' | 'blocking'>(null)
+  // When set, we're replacing this dep instead of adding a new one
+  const [editingDepId, setEditingDepId] = useState<string | null>(null)
   const [pickerQuery, setPickerQuery] = useState('')
   const [hits, setHits] = useState<SearchHit[]>([])
   const [searching, setSearching] = useState(false)
@@ -94,6 +96,17 @@ export function DependenciesSection({
     if (!picker) return
     setAdding(true)
     try {
+      // If editing an existing dep, delete it first
+      if (editingDepId) {
+        const delRes = await fetch(`/api/tasks/${taskId}/dependencies/${editingDepId}`, { method: 'DELETE' })
+        if (!delRes.ok) {
+          toast.error('Failed to replace dependency')
+          return
+        }
+        const setter = picker === 'blockedBy' ? setBlockedBy : setBlocking
+        setter(prev => prev.filter(d => d.id !== editingDepId))
+      }
+
       const body = picker === 'blockedBy'
         ? { blockerId: hit.id }
         : { blockedId: hit.id }
@@ -115,11 +128,12 @@ export function DependenciesSection({
       }
       setPicker(null)
       setPickerQuery('')
+      setEditingDepId(null)
       onChanged?.()
     } finally {
       setAdding(false)
     }
-  }, [picker, taskId, onChanged])
+  }, [picker, editingDepId, taskId, onChanged])
 
   const removeDep = useCallback(async (depId: string, side: 'blockedBy' | 'blocking') => {
     // Optimistic
@@ -159,7 +173,8 @@ export function DependenciesSection({
         deps={blockedBy}
         getTask={d => d.blocker}
         onRemove={depId => removeDep(depId, 'blockedBy')}
-        onAdd={() => { setPicker('blockedBy'); setPickerQuery('') }}
+        onAdd={() => { setEditingDepId(null); setPicker('blockedBy'); setPickerQuery('') }}
+        onEdit={depId => { setEditingDepId(depId); setPicker('blockedBy'); setPickerQuery('') }}
       />
 
       {/* Blocking */}
@@ -169,16 +184,17 @@ export function DependenciesSection({
         deps={blocking}
         getTask={d => d.blocked}
         onRemove={depId => removeDep(depId, 'blocking')}
-        onAdd={() => { setPicker('blocking'); setPickerQuery('') }}
+        onAdd={() => { setEditingDepId(null); setPicker('blocking'); setPickerQuery('') }}
+        onEdit={depId => { setEditingDepId(depId); setPicker('blocking'); setPickerQuery('') }}
       />
 
       {/* Picker */}
       {picker && (
         <div
           className="fixed inset-0 z-[55] flex items-start justify-center p-4 sm:pt-[15vh]"
-          onClick={e => { if (e.target === e.currentTarget) setPicker(null) }}
+          onClick={e => { if (e.target === e.currentTarget) { setPicker(null); setEditingDepId(null) } }}
         >
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setPicker(null)} />
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => { setPicker(null); setEditingDepId(null) }} />
           <div className="relative w-full max-w-md bg-bg-card rounded-xl shadow-2xl border border-line overflow-hidden flex flex-col max-h-[70dvh]">
             <div className="flex items-center gap-3 px-4 py-3 border-b border-line">
               <Search className="h-4 w-4 text-gray-4" />
@@ -186,13 +202,15 @@ export function DependenciesSection({
                 autoFocus
                 value={pickerQuery}
                 onChange={e => setPickerQuery(e.target.value)}
-                placeholder={picker === 'blockedBy'
-                  ? 'Find a task that blocks this one…'
-                  : 'Find a task this one blocks…'}
+                placeholder={editingDepId
+                  ? 'Pick a replacement task…'
+                  : picker === 'blockedBy'
+                    ? 'Find a task that blocks this one…'
+                    : 'Find a task this one blocks…'}
                 className="flex-1 bg-transparent outline-none text-sm text-gray-1 placeholder:text-gray-4"
               />
               <button
-                onClick={() => setPicker(null)}
+                onClick={() => { setPicker(null); setEditingDepId(null) }}
                 className="h-7 w-7 flex items-center justify-center rounded text-gray-4 hover:text-gray-2"
                 aria-label="Close"
               >
@@ -243,6 +261,7 @@ function DepList({
   getTask,
   onRemove,
   onAdd,
+  onEdit,
 }: {
   label: string
   accent: 'rose' | 'amber'
@@ -250,6 +269,7 @@ function DepList({
   getTask: (d: Dependency) => DepTask | undefined
   onRemove: (depId: string) => void
   onAdd: () => void
+  onEdit: (depId: string) => void
 }) {
   return (
     <div className="mb-2">
@@ -294,6 +314,13 @@ function DepList({
                 <span className="text-[10px] uppercase tracking-wide text-gray-2 flex-shrink-0">
                   {STATUS_LABELS[t.status]}
                 </span>
+                <button
+                  onClick={() => onEdit(d.id)}
+                  className="h-6 w-6 flex items-center justify-center text-gray-4 hover:text-indigo-500 opacity-0 group-hover:opacity-100 focus:opacity-100 rounded"
+                  aria-label="Change dependency"
+                >
+                  <Pencil className="h-3 w-3" />
+                </button>
                 <button
                   onClick={() => onRemove(d.id)}
                   className="h-6 w-6 flex items-center justify-center text-gray-4 hover:text-red-500 opacity-0 group-hover:opacity-100 focus:opacity-100 rounded"

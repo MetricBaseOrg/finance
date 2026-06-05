@@ -97,9 +97,11 @@ body {
   --bg-hover: #1c1c1c;
   --gold-glow: rgba(201, 168, 76, 0.12);
   --gray-1: #e5e5e5;
-  --gray-2: #999999;
-  --gray-3: #555555;
-  --gray-4: #2a2a2a;
+  --gray-2: #aaaaaa;
+  --gray-3: #888888;
+  /* gray-4 is used only as a muted text colour (never bg/border); keep it
+     readable on the near-black background rather than near-invisible. */
+  --gray-4: #6e6e6e;
   --line: rgba(255, 255, 255, 0.06);
   --line-strong: rgba(201, 168, 76, 0.3);
   --up: #2faf65;
@@ -334,8 +336,10 @@ body {
   --bg-hover: #f0f0ee;
   --gray-1: #1f1f1f;
   --gray-2: #5f5f5f;
-  --gray-3: #8a8a8a;
-  --gray-4: #e2e2de;
+  --gray-3: #7a7a78;
+  /* gray-4 is used only as a muted text colour (never bg/border); keep it
+     readable on the white background rather than near-invisible. */
+  --gray-4: #94948f;
   --line: rgba(0, 0, 0, 0.10);
   --line-strong: rgba(201, 168, 76, 0.5);
   --grid-line: rgba(0, 0, 0, 0.03);

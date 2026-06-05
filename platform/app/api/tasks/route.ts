@@ -47,6 +47,7 @@ export async function GET(req: Request) {
     where,
     include: {
       assignee: { select: { id: true, name: true, email: true, image: true } },
+      project: { select: { id: true, name: true, color: true } },
       labels: true,
       subTasks: { select: { id: true, title: true, status: true } },
       _count: { select: { comments: true, subTasks: true } },

@@ -180,6 +180,85 @@ export function TimelineView({ tasks, expandedTaskIds, onToggleExpand, onTaskCli
     return edges
   }, [visibleRows])
 
+  // Pre-compute routed paths for all edges together so each line can avoid both
+  // task bars and the vertical segments of previously-assigned lines.
+  const depRoutes = useMemo(() => {
+    const RGAP = 8
+
+    const computeBar = (task: Task) => {
+      if (!task.startDate && !task.dueDate) return null
+      const start = task.startDate ? new Date(task.startDate) : new Date(task.dueDate!)
+      const end   = task.dueDate   ? new Date(task.dueDate)   : new Date(task.startDate!)
+      const cs    = start < rangeStart ? rangeStart : start
+      const ce    = end   > rangeEnd   ? rangeEnd   : end
+      if (cs > rangeEnd || ce < rangeStart) return null
+      const left  = differenceInDays(cs, rangeStart) * DAY_W
+      const width = Math.max(differenceInDays(ce, cs) + 1, 1) * DAY_W
+      return { left, width }
+    }
+
+    // Tracks vertical segments already assigned: {routeX, rMin, rMax}
+    const assigned: { routeX: number; rMin: number; rMax: number }[] = []
+
+    return depEdges.map(({ fromId, toId }) => {
+      const fromTask = tasks.find(t => t.id === fromId)
+      const toTask   = tasks.find(t => t.id === toId)
+      if (!fromTask || !toTask) return null
+
+      const fromBar = computeBar(fromTask)
+      const toBar   = computeBar(toTask)
+      if (!fromBar || !toBar) return null
+
+      const fromRow = rowIdx[fromId]
+      const toRow   = rowIdx[toId]
+      if (fromRow === undefined || toRow === undefined) return null
+
+      const x1 = fromBar.left + fromBar.width + 2
+      const y1 = HDR_H + fromRow * ROW_H + ROW_H / 2
+      const x2 = toBar.left - 2
+      const y2 = HDR_H + toRow * ROW_H + ROW_H / 2
+
+      const rMin = Math.min(fromRow, toRow)
+      const rMax = Math.max(fromRow, toRow)
+
+      // Compute routeX first for both cases — determines which path style to use
+      let routeX = x1 + RGAP
+      for (let iter = 0; iter < 40; iter++) {
+        let clear = true
+
+        for (let r = rMin + 1; r < rMax; r++) {
+          const row = visibleRows[r]
+          if (!row) continue
+          const bar = computeBar(row.task)
+          if (!bar) continue
+          if (routeX > bar.left - RGAP && routeX < bar.left + bar.width + RGAP) {
+            routeX = bar.left + bar.width + RGAP
+            clear = false; break
+          }
+        }
+
+        for (const seg of assigned) {
+          if (seg.rMin <= rMax && seg.rMax >= rMin && Math.abs(routeX - seg.routeX) < RGAP) {
+            routeX = seg.routeX + RGAP
+            clear = false; break
+          }
+        }
+
+        if (clear) break
+      }
+
+      // Forward only when routeX still clears the target bar's left edge
+      const isForward = x2 > routeX
+
+      assigned.push({ routeX, rMin, rMax })
+      return {
+        key: `${fromId}-${toId}`,
+        x1, y1, x2, y2, routeX, isForward,
+        isDone: fromTask.status === 'DONE',
+      }
+    })
+  }, [depEdges, tasks, visibleRows, rowIdx, rangeStart, rangeEnd])
+
   // Backwards-compat name kept for the empty-state copy
   const tasksWithDates = parentTasksWithDates
 
@@ -427,69 +506,46 @@ export function TimelineView({ tasks, expandedTaskIds, onToggleExpand, onTaskCli
             })}
 
             {/* Dependency arrows overlay */}
-            {depEdges.length > 0 && (
+            {depRoutes.some(Boolean) && (
               <svg
                 className="absolute top-0 left-0 pointer-events-none z-30"
                 style={{ width: totalW, height: HDR_H + visibleRows.length * ROW_H }}
               >
-                <defs>
-                  <marker
-                    id="dep-arrow"
-                    viewBox="0 0 10 6"
-                    refX="8"
-                    refY="3"
-                    markerWidth="7"
-                    markerHeight="5"
-                    orient="auto"
-                  >
-                    <path d="M0 0.5 L8 3 L0 5.5 Z" fill="#6366f1" />
-                  </marker>
-                </defs>
-                {depEdges.map(({ fromId, toId }) => {
-                  const fromTask = tasks.find(t => t.id === fromId)
-                  const toTask = tasks.find(t => t.id === toId)
-                  if (!fromTask || !toTask) return null
-
-                  const fromBar = getBar(fromTask)
-                  const toBar = getBar(toTask)
-                  if (!fromBar || !toBar) return null
-
-                  const fromRow = rowIdx[fromId]
-                  const toRow = rowIdx[toId]
-                  if (fromRow === undefined || toRow === undefined) return null
-
-                  // Arrow from right edge of blocker bar to left edge of blocked bar
-                  const x1 = fromBar.left + fromBar.width + 2  // right edge + small gap
-                  const y1 = HDR_H + fromRow * ROW_H + ROW_H / 2  // vertical center of blocker row
-                  const x2 = toBar.left - 2                     // left edge - small gap
-                  const y2 = HDR_H + toRow * ROW_H + ROW_H / 2   // vertical center of blocked row
-
-                  // Route: horizontal out → vertical drop → horizontal in
-                  const gap = 14
-                  const midX = Math.max(x1, x2) + gap
-
-                  let d: string
-                  if (x1 >= x2) {
-                    // Blocker ends after blocked starts — route around
-                    d = `M${x1},${y1} L${midX},${y1} L${midX},${y2} L${x2},${y2}`
-                  } else {
-                    // Normal: blocker ends before blocked starts — simple L-shape
-                    const turnX = x1 + (x2 - x1) / 2
-                    d = `M${x1},${y1} L${turnX},${y1} L${turnX},${y2} L${x2},${y2}`
-                  }
-
+                {depRoutes.map(route => {
+                  if (!route) return null
+                  const { key, x1, y1, x2, y2, routeX, isForward, isDone } = route
+                  // Row boundary between source and target — direction-aware
+                  const goingDown = y1 < y2
+                  const yDivider = goingDown ? y2 - ROW_H / 2 : y2 + ROW_H / 2
+                  const vs = goingDown ? 1 : -1
+                  const r = Math.min(
+                    6,
+                    Math.abs(routeX - x1) / 2,
+                    Math.abs(y2 - y1) / 4,
+                    Math.abs(x2 - routeX) / 2,
+                    Math.abs(yDivider - y1) / 2,
+                    Math.abs(y2 - yDivider) / 2,
+                    Math.abs(x1 - x2) / 2,
+                  )
+                  const d = isForward
+                    ? `M${x1},${y1} H${routeX - r} Q${routeX},${y1} ${routeX},${y1 + r} V${y2 - r} Q${routeX},${y2} ${routeX + r},${y2} H${x2}`
+                    : `M${x1},${y1} H${routeX} V${yDivider - vs*r} Q${routeX},${yDivider} ${routeX - r},${yDivider} H${x2 + r} Q${x2},${yDivider} ${x2},${yDivider + vs*r} V${y2}`
                   return (
-                    <g key={`${fromId}-${toId}`}>
-                      {/* Start dot on blocker bar end */}
+                    <g key={key}>
                       <circle cx={x1 - 1} cy={y1} r="3" fill="#6366f1" opacity={0.8} />
                       <path
                         d={d}
                         fill="none"
                         stroke="#6366f1"
                         strokeWidth="1.5"
-                        strokeDasharray={fromTask.status === 'DONE' ? '4 3' : 'none'}
+                        strokeDasharray={isDone ? '4 3' : undefined}
                         opacity={0.65}
-                        markerEnd="url(#dep-arrow)"
+                      />
+                      {/* Arrowhead always pointing right, independent of path direction */}
+                      <polygon
+                        points={`${x2},${y2 - 3} ${x2 + 6},${y2} ${x2},${y2 + 3}`}
+                        fill="#6366f1"
+                        opacity={0.8}
                       />
                     </g>
                   )

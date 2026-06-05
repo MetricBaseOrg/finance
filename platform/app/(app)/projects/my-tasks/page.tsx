@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, useMemo, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { CheckSquare, Check, ChevronDown, ChevronRight } from 'lucide-react'
@@ -47,6 +47,7 @@ function MyTasksInner() {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
   const [filterStatus, setFilterStatus] = useState('ALL')
   const [filterPriority, setFilterPriority] = useState('ALL')
+  const [filterProject, setFilterProject] = useState('ALL')
   const [expandedTaskIds, setExpandedTaskIds] = useState<Set<string>>(new Set())
   const [userRole, setUserRole] = useState<string | null>(null)
 
@@ -89,9 +90,19 @@ function MyTasksInner() {
       .then(data => { setTasks(data); setLoading(false) })
   }, [session?.user?.id, userRole])
 
+  // Distinct projects across the loaded tasks, for the project filter dropdown.
+  const projects = useMemo(() => {
+    const byId = new Map<string, { id: string; name: string; color: string }>()
+    for (const t of tasks) {
+      if (t.project && !byId.has(t.project.id)) byId.set(t.project.id, t.project)
+    }
+    return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name))
+  }, [tasks])
+
   const filtered = tasks.filter(t => {
     if (filterStatus !== 'ALL' && t.status !== filterStatus) return false
     if (filterPriority !== 'ALL' && t.priority !== filterPriority) return false
+    if (filterProject !== 'ALL' && t.project?.id !== filterProject) return false
     return true
   })
 
@@ -173,9 +184,25 @@ function MyTasksInner() {
           </h1>
           <p className="text-sm text-gray-3 mt-1">{filtered.length} task{filtered.length !== 1 ? 's' : ''}</p>
         </div>
-        <div className="flex items-center gap-2 w-full sm:w-auto">
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          <Select value={filterProject} onValueChange={setFilterProject}>
+            <SelectTrigger className="flex-1 min-w-0 sm:w-44 h-9 sm:h-8 text-xs">
+              <SelectValue placeholder="All projects" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All Projects</SelectItem>
+              {projects.map(p => (
+                <SelectItem key={p.id} value={p.id}>
+                  <span className="flex items-center gap-2 min-w-0">
+                    <span className="w-2 h-2 rounded-sm flex-shrink-0" style={{ backgroundColor: p.color }} />
+                    <span className="truncate">{p.name}</span>
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Select value={filterStatus} onValueChange={setFilterStatus}>
-            <SelectTrigger className="flex-1 sm:w-36 h-9 sm:h-8 text-xs">
+            <SelectTrigger className="flex-1 min-w-0 sm:w-36 h-9 sm:h-8 text-xs">
               <SelectValue placeholder="All statuses" />
             </SelectTrigger>
             <SelectContent>
@@ -186,7 +213,7 @@ function MyTasksInner() {
             </SelectContent>
           </Select>
           <Select value={filterPriority} onValueChange={setFilterPriority}>
-            <SelectTrigger className="flex-1 sm:w-36 h-9 sm:h-8 text-xs">
+            <SelectTrigger className="flex-1 min-w-0 sm:w-36 h-9 sm:h-8 text-xs">
               <SelectValue placeholder="All priorities" />
             </SelectTrigger>
             <SelectContent>
