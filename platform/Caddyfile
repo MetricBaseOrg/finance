@@ -1,8 +1,0 @@
-# Reverse proxy + automatic TLS for the platform.
-# Path-based routing is handled inside Next.js (/projects, /finance, /field,
-# /tools), so Caddy just terminates TLS and forwards everything to web.
-
-apps.metricbase.org {
-	encode zstd gzip
-	reverse_proxy web:3000
-}

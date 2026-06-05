@@ -1,0 +1,26 @@
+
+> financial-tracker@0.1.0 dev
+> next dev
+
+⚠ Port 3000 is in use by process 39660, using available port 3003 instead.
+▲ Next.js 16.2.6 (Turbopack)
+- Local:         http://localhost:3003
+- Network:       http://192.168.1.6:3003
+- Environments: .env.local
+✓ Ready in 898ms
+⚠ Warning: Next.js inferred your workspace root, but it may not be correct.
+ We detected multiple lockfiles and selected the directory of D:\OneDrive\MetricBase\apps\financial-tracker\package-lock.json as the root directory.
+ To silence this warning, set `turbopack.root` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+   See https://nextjs.org/docs/app/api-reference/config/next-config-js/turbopack#root-directory for more information.
+ Detected additional lockfiles: 
+   * D:\OneDrive\MetricBase\apps\financial-tracker\.claude\worktrees\vigilant-hypatia-07898c\financial-tracker\package-lock.json
+
+⨯ Another next dev server is already running.
+
+- Local:        http://localhost:3002
+- PID:          39252
+- Dir:          D:\OneDrive\MetricBase\apps\financial-tracker\.claude\worktrees\vigilant-hypatia-07898c\financial-tracker
+- Log:          .next\dev\logs\next-development.log
+
+Run taskkill /PID 39252 /F to stop it.
+[?25h

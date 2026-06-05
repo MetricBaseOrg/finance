@@ -1,0 +1,444 @@
+// MetricBase Financial Tracker — Phase 0 schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Auth.js v5 standard models ─────────────────────────────────────────────
+
+model User {
+  id            String       @id @default(cuid())
+  email         String       @unique
+  name          String?
+  image         String?
+  emailVerified DateTime?
+  createdAt     DateTime     @default(now())
+
+  accounts        Account[]
+  sessions        Session[]
+  memberships     Membership[]
+  invitesCreated  WorkspaceInvite[] @relation("InvitesCreated")
+  invitesAccepted WorkspaceInvite[] @relation("InvitesAccepted")
+  auditLogs       AuditLog[]        @relation("AuditLogs")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ─── Workspaces & Membership ────────────────────────────────────────────────
+
+enum WorkspaceType {
+  INDIVIDUAL
+  COMPANY
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+model Workspace {
+  id           String        @id @default(cuid())
+  slug         String        @unique
+  name         String
+  type         WorkspaceType
+  baseCurrency String        // "IDR" | "USD"
+  createdAt    DateTime      @default(now())
+
+  memberships      Membership[]
+  finAccounts      FinAccount[]
+  categories       Category[]
+  transactions     Transaction[]
+  tags             Tag[]
+  recurringRules   RecurringRule[]
+  positions        Position[]
+  investmentPositions InvestmentPosition[]
+  invites          WorkspaceInvite[]
+  auditLogs        AuditLog[]
+}
+
+model Membership {
+  id          String @id @default(cuid())
+  userId      String
+  workspaceId String
+  role        Role   @default(OWNER)
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, workspaceId])
+  @@index([workspaceId])
+}
+
+// ─── Financial domain ───────────────────────────────────────────────────────
+
+enum FinAccountType {
+  BANK
+  CASH
+  CRYPTO
+  BROKERAGE
+  CREDIT
+  OTHER
+}
+
+model FinAccount {
+  id             String         @id @default(cuid())
+  workspaceId    String
+  name           String
+  type           FinAccountType
+  currency       String
+  openingBalance Decimal        @default(0) @db.Decimal(20, 4)
+  archivedAt    DateTime?
+  createdAt      DateTime       @default(now())
+
+  workspace              Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  txns                   Transaction[]   @relation("PrimaryAcct")
+  counterTxns            Transaction[]   @relation("CounterAcct")
+  recurringRulesPrimary  RecurringRule[] @relation("RecurringPrimaryAcct")
+  recurringRulesCounter  RecurringRule[] @relation("RecurringCounterAcct")
+  positions              Position[]
+  investmentPositions    InvestmentPosition[]
+
+  @@index([workspaceId])
+}
+
+enum CategoryKind {
+  INCOME
+  EXPENSE
+}
+
+model Category {
+  id            String       @id @default(cuid())
+  workspaceId   String
+  name          String
+  kind          CategoryKind
+  parentId      String?
+  monthlyBudget Decimal?     @db.Decimal(20, 4)
+  color         String?
+  createdAt     DateTime     @default(now())
+
+  parent           Category?      @relation("CategoryTree", fields: [parentId], references: [id])
+  children         Category[]     @relation("CategoryTree")
+  workspace        Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  txns             Transaction[]
+  recurringRules   RecurringRule[]
+
+  @@index([workspaceId])
+}
+
+enum TxnType {
+  INCOME
+  EXPENSE
+  TRANSFER
+}
+
+enum RecurrenceFreq {
+  DAILY
+  WEEKLY
+  MONTHLY
+  YEARLY
+}
+
+enum TradeSide {
+  BUY
+  SELL
+}
+
+enum UnitKind {
+  SHARES
+  TOKENS
+  LOTS
+}
+
+model Transaction {
+  id               String   @id @default(cuid())
+  workspaceId      String
+  finAccountId     String
+  counterAccountId String?
+  categoryId       String?
+  positionId       String?
+  date             DateTime
+  amount           Decimal  @db.Decimal(20, 4)
+  currency         String
+  fxRate           Decimal  @db.Decimal(20, 8)
+  baseAmount       Decimal  @db.Decimal(20, 4)
+  type             TxnType
+  memo             String?
+  createdAt        DateTime @default(now())
+
+  workspace      Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  finAccount     FinAccount       @relation("PrimaryAcct", fields: [finAccountId], references: [id])
+  counterAccount FinAccount?      @relation("CounterAcct", fields: [counterAccountId], references: [id])
+  category       Category?        @relation(fields: [categoryId], references: [id])
+  position       Position?        @relation(fields: [positionId], references: [id])
+  tags           TransactionTag[]
+  lot            Lot?
+  dividend       Dividend?
+
+  @@index([workspaceId, date])
+  @@index([workspaceId, categoryId, date])
+}
+
+model Tag {
+  id          String @id @default(cuid())
+  workspaceId String
+  name        String
+
+  workspace Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  txns      TransactionTag[]
+
+  @@unique([workspaceId, name])
+}
+
+model TransactionTag {
+  transactionId String
+  tagId         String
+
+  transaction Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  tag         Tag         @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([transactionId, tagId])
+}
+
+model FxRate {
+  id     String   @id @default(cuid())
+  base   String
+  quote  String
+  rate   Decimal  @db.Decimal(20, 8)
+  date   DateTime
+  source String   @default("frankfurter")
+
+  @@unique([base, quote, date])
+  @@index([date])
+}
+
+// ─── Phase 1: Recurring Transactions ────────────────────────────────────────
+
+model RecurringRule {
+  id               String          @id @default(cuid())
+  workspaceId      String
+  finAccountId     String
+  counterAccountId String?
+  categoryId       String?
+  type             TxnType
+  amount           Decimal         @db.Decimal(20, 4)
+  currency         String
+  memo             String?
+  freq             RecurrenceFreq
+  interval         Int             @default(1)
+  startDate        DateTime
+  nextRunDate      DateTime
+  endDate          DateTime?
+  lastPostedAt     DateTime?
+  createdAt        DateTime        @default(now())
+
+  workspace      Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  finAccount     FinAccount @relation("RecurringPrimaryAcct", fields: [finAccountId], references: [id], onDelete: Cascade)
+  counterAccount FinAccount? @relation("RecurringCounterAcct", fields: [counterAccountId], references: [id], onDelete: SetNull)
+  category       Category?  @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, nextRunDate])
+  @@index([workspaceId])
+}
+
+// ─── Phase 1: Investment Positions & Lots ───────────────────────────────────
+
+model Position {
+  id          String   @id @default(cuid())
+  workspaceId String
+  finAccountId String
+  symbol      String
+  unitKind    UnitKind @default(SHARES)
+  createdAt   DateTime @default(now())
+
+  workspace  Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  finAccount FinAccount    @relation(fields: [finAccountId], references: [id], onDelete: Cascade)
+  lots       Lot[]
+  txns       Transaction[]
+
+  @@unique([finAccountId, symbol])
+  @@index([workspaceId])
+}
+
+model Lot {
+  id            String    @id @default(cuid())
+  positionId    String
+  transactionId String    @unique
+  side          TradeSide
+  quantity      Decimal   @db.Decimal(20, 8)
+  unitCost      Decimal   @db.Decimal(20, 8)
+  fee           Decimal   @default(0) @db.Decimal(20, 4)
+  remainingQty  Decimal   @db.Decimal(20, 8)
+  acquiredDate  DateTime
+  closedAt      DateTime?
+  createdAt     DateTime  @default(now())
+
+  position    Position    @relation(fields: [positionId], references: [id], onDelete: Cascade)
+  transaction Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  @@index([positionId])
+}
+
+// ─── Phase 2: Invites, Audit, Investments ────────────────────────────────
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  ARCHIVE
+  UNARCHIVE
+  INVITE_CREATE
+  INVITE_REVOKE
+  INVITE_ACCEPT
+  MEMBER_ROLE_CHANGE
+  MEMBER_REMOVE
+  INVESTMENT_BUY
+  INVESTMENT_SELL
+  INVESTMENT_DIVIDEND
+}
+
+enum AuditEntityType {
+  ACCOUNT
+  TRANSACTION
+  CATEGORY
+  WORKSPACE
+  FX_RATE
+  MEMBERSHIP
+  INVITE
+  INVESTMENT_POSITION
+  INVESTMENT_LOT
+  DIVIDEND
+}
+
+model WorkspaceInvite {
+  id               String    @id @default(cuid())
+  workspaceId      String
+  token            String    @unique @default(cuid())
+  role             Role      @default(MEMBER)
+  email            String?
+  createdByUserId  String
+  expiresAt        DateTime
+  acceptedAt       DateTime?
+  acceptedByUserId String?
+  createdAt        DateTime  @default(now())
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdByUser User      @relation("InvitesCreated", fields: [createdByUserId], references: [id], onDelete: Cascade)
+  acceptedByUser User?    @relation("InvitesAccepted", fields: [acceptedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId])
+  @@index([email])
+}
+
+model AuditLog {
+  id          String         @id @default(cuid())
+  workspaceId String
+  userId      String?
+  action      AuditAction
+  entityType  AuditEntityType
+  entityId    String
+  summary     String
+  metadata    Json?
+  createdAt   DateTime       @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User?     @relation("AuditLogs", fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, createdAt])
+  @@index([workspaceId, action])
+  @@index([workspaceId, entityType])
+}
+
+model InvestmentPosition {
+  id           String    @id @default(cuid())
+  workspaceId  String
+  finAccountId String
+  symbol       String
+  name         String?
+  currency     String
+  lastPrice    Decimal?  @db.Decimal(20, 8)
+  lastPriceAt  DateTime?
+  realizedPl   Decimal   @default(0) @db.Decimal(20, 4)
+  closedAt     DateTime?
+  createdAt    DateTime  @default(now())
+
+  workspace  Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  finAccount FinAccount     @relation(fields: [finAccountId], references: [id])
+  lots       InvestmentLot[]
+  dividends  Dividend[]
+
+  @@index([workspaceId])
+  @@index([finAccountId])
+}
+
+model InvestmentLot {
+  id                String   @id @default(cuid())
+  positionId        String
+  quantity          Decimal  @db.Decimal(20, 4)
+  remainingQuantity Decimal  @db.Decimal(20, 4)
+  costPerUnit       Decimal  @db.Decimal(20, 8)
+  fees              Decimal? @db.Decimal(20, 4)
+  acquiredAt        DateTime
+  createdAt         DateTime @default(now())
+
+  position InvestmentPosition @relation(fields: [positionId], references: [id], onDelete: Cascade)
+
+  @@index([positionId, acquiredAt])
+}
+
+model Dividend {
+  id            String   @id @default(cuid())
+  positionId    String
+  totalAmount   Decimal  @db.Decimal(20, 4)
+  currency      String
+  payDate       DateTime
+  transactionId String?  @unique
+  createdAt     DateTime @default(now())
+
+  position    InvestmentPosition @relation(fields: [positionId], references: [id], onDelete: Cascade)
+  transaction Transaction?       @relation(fields: [transactionId], references: [id], onDelete: SetNull)
+
+  @@index([positionId, payDate])
+}
