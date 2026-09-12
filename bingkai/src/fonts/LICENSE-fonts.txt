@@ -1,0 +1,16 @@
+Manrope and JetBrains Mono, both under the SIL Open Font License 1.1.
+
+  Manrope        — https://github.com/sharanda/manrope
+  JetBrains Mono — https://github.com/JetBrains/JetBrainsMono
+
+Vendored as variable-weight woff2 (basic-latin subset) rather than fetched from
+Google Fonts at build time. Two reasons:
+
+  1. `next/font/google` fetches during the build, so a build machine that cannot
+     reach fonts.googleapis.com fails outright. That is a real dependency on a
+     third party staying reachable, for an app whose whole argument is that it
+     does not need third parties.
+  2. Each family ships as ONE variable file covering every weight we use, so the
+     seven @font-face subsets Google emits collapse to two files.
+
+The SIL OFL permits redistribution; these files are unmodified.

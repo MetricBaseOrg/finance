@@ -1,0 +1,82 @@
+import type { Metadata } from "next";
+import localFont from "next/font/local";
+import Link from "next/link";
+import "./globals.css";
+
+// Vendored rather than pulled from next/font/google. That helper fetches at BUILD
+// time, so a machine that cannot reach fonts.googleapis.com fails the build outright
+// - which is exactly what happened here. Both families ship as a single
+// variable-weight file, so the seven subset files Google emits collapse to two.
+// See src/fonts/LICENSE-fonts.txt (SIL OFL 1.1).
+const manrope = localFont({
+  src: "../fonts/manrope-variable.woff2",
+  weight: "400 800",
+  style: "normal",
+  variable: "--font-manrope",
+  display: "swap",
+});
+const mono = localFont({
+  src: "../fonts/jetbrains-mono-variable.woff2",
+  weight: "400 700",
+  style: "normal",
+  variable: "--font-jetbrains-mono",
+  display: "swap",
+});
+
+const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? "https://bingkai.metricbase.org";
+
+export const metadata: Metadata = {
+  metadataBase: new URL(SITE),
+  title: {
+    default: "Bingkai — twibbon tanpa unggah, tanpa watermark",
+    template: "%s · Bingkai",
+  },
+  description:
+    "Bikin dan pakai bingkai kampanye tanpa akun, tanpa watermark, tanpa iklan. Fotomu diproses di perangkatmu sendiri dan tidak pernah dikirim ke server.",
+  openGraph: { siteName: "Bingkai", type: "website" },
+  robots: { index: true, follow: true },
+};
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="id" className={`${manrope.variable} ${mono.variable}`}>
+      <body>
+        <header className="border-b border-line">
+          <div className="mx-auto flex max-w-5xl items-center justify-between px-5 py-4">
+            <Link href="/" className="flex items-baseline gap-2">
+              <span className="text-lg font-extrabold tracking-tight text-white">
+                Bingkai
+              </span>
+              <span className="font-mono text-[9px] uppercase tracking-widest text-gray-3">
+                metricbase
+              </span>
+            </Link>
+            <nav className="flex items-center gap-5 font-mono text-[10px] uppercase tracking-wider">
+              <Link href="/#kenapa" className="text-gray-2 hover:text-gold">
+                Kenapa
+              </Link>
+              <Link
+                href="/buat"
+                className="border border-line-strong bg-tint-gold-soft px-3 py-1.5 text-gold hover:bg-tint-gold-hover"
+              >
+                Buat kampanye
+              </Link>
+            </nav>
+          </div>
+        </header>
+
+        <main className="mx-auto max-w-5xl px-5 py-10">{children}</main>
+
+        <footer className="mt-16 border-t border-line">
+          <div className="mx-auto flex max-w-5xl flex-col gap-2 px-5 py-8 font-mono text-[10px] uppercase tracking-wider text-gray-3 sm:flex-row sm:justify-between">
+            <span>Bingkai · bagian dari MetricBase</span>
+            <span className="flex gap-4">
+              <a href="https://metricbase.org/privacy">Privasi</a>
+              <a href="https://metricbase.org/terms">Ketentuan</a>
+            </span>
+          </div>
+        </footer>
+      </body>
+    </html>
+  );
+}

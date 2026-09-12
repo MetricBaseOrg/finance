@@ -1,0 +1,82 @@
+// Bingkai — campaign frames, no accounts.
+//
+// There is no User model, and that is a product decision rather than an omission.
+// Twibbonize makes you register to publish a campaign, which is the single biggest
+// drop-off in the funnel for the people who actually run these: a school admin, a
+// committee volunteer, someone organising a village event the night before. Here a
+// campaign is created anonymously and owned by whoever holds its `manageKey`, which
+// is handed over once at creation. That is the same trust model as an unlisted link,
+// and it is enough for a photo frame.
+//
+// Frames live in the row as a data URL. They are small (a transparent PNG campaign
+// frame is typically 80-600 KB) and it keeps v1 down to one managed service. When
+// average frame size or campaign volume makes that wrong, move `frameData` to blob
+// storage and keep a URL here; nothing else in the schema changes.
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+// Prisma 7 no longer accepts `url` here: the CLI reads it from prisma.config.ts and
+// the runtime client is handed an adapter instead. Matches apps/platform.
+datasource db {
+  provider = "postgresql"
+}
+
+model Campaign {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  title     String
+  organiser String?
+  /// Shown under the title on the campaign page. Plain text.
+  blurb     String?
+  /// Data URL of the transparent frame PNG.
+  frameData String
+  frameW    Int
+  frameH    Int
+  /// Background shown through the transparent parts of the frame where the photo
+  /// does not reach.
+  background String  @default("#0a0a0a")
+  /// JSON array of FieldSpec — the personalised text layers (name, class, unit).
+  /// This is the feature Twibbonize has no answer for.
+  fields    Json     @default("[]")
+  /// Secret that grants access to the manage page. Handed over once, at creation.
+  manageKey String   @unique
+  /// Campaign creators can close a campaign without deleting it.
+  closedAt  DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  events Event[]
+
+  @@index([createdAt])
+}
+
+/// Aggregate counters only. We never store an IP, a user agent string, a cookie or
+/// anything else that identifies a supporter — the whole pitch is that the supporter
+/// is not tracked, and analytics that betray that would be worse than no analytics.
+/// Referrer is kept as a bare host so organisers can tell WhatsApp from Instagram.
+model Event {
+  id         String   @id @default(cuid())
+  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  campaignId String
+  kind       EventKind
+  /// Bare host, e.g. "instagram.com". Null when opened directly.
+  refHost    String?
+  /// Export preset id for download events.
+  preset     String?
+  /// Truncated to the hour, so two supporters are never distinguishable by time.
+  hour       DateTime
+  count      Int      @default(1)
+
+  @@unique([campaignId, kind, refHost, preset, hour])
+  @@index([campaignId, hour])
+}
+
+enum EventKind {
+  VIEW
+  PHOTO_PICKED
+  DOWNLOAD
+  SHARE
+}

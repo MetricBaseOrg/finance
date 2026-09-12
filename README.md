@@ -8,6 +8,7 @@ The static editorial site and Blogger templates live in [`../MetricBase/`](../Me
 
 | Directory | Description | Production |
 | --- | --- | --- |
+| [`bingkai`](./bingkai/) | **Campaign photo frames** (twibbon) that never upload the supporter's photo — compositing runs in the browser on a canvas, so there is no watermark to sell the removal of and nothing to leak. No account on either side; a campaign is owned by whoever holds its manage key. Personalised text fields inside the frame, Story/feed/print export presets, and counter-only analytics that store no IP or cookie. Next.js 16 · Prisma 7 + Neon · runs with no DB in dev. See [`bingkai/README.md`](./bingkai/README.md). | `bingkai.metricbase.org` *(pending)* |
 | [`financial-tracker`](./financial-tracker/) | Multi-tenant financial tracker for individuals + companies. Multi-currency (IDR/USD), P&L + balance sheet, investments + dividends, recurring transactions, workspace invites, audit log, CSV/PDF export. Next.js 16 · Prisma 7 + Neon · Auth.js v5. | [`apps.metricbase.org`](https://apps.metricbase.org) |
 
 ## Conventions

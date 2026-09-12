@@ -1,0 +1,56 @@
+import { notFound } from "next/navigation";
+import type { Metadata } from "next";
+import { getCampaign } from "@/lib/store";
+import FrameEditor from "@/components/FrameEditor";
+
+export const dynamic = "force-dynamic";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const c = await getCampaign(slug);
+  if (!c) return { title: "Kampanye tidak ditemukan" };
+  return {
+    title: c.title,
+    description:
+      c.blurb ??
+      `Pasang bingkai ${c.title} di fotomu. Tanpa unggah, tanpa watermark, tanpa akun.`,
+  };
+}
+
+export default async function CampaignPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const { slug } = await params;
+  const c = await getCampaign(slug);
+  if (!c) notFound();
+
+  // manageKey is stripped here rather than in the component, so the secret is never
+  // part of the payload React serialises into the page.
+  const { manageKey, ...safe } = c;
+  void manageKey;
+
+  return (
+    <div className="space-y-8">
+      <header className="space-y-2">
+        <p className="eyebrow">{c.organiser ?? "Kampanye"}</p>
+        <h1 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
+          {c.title}
+        </h1>
+        {c.blurb && <p className="max-w-2xl text-sm text-gray-2">{c.blurb}</p>}
+        {c.closedAt && (
+          <p className="border border-line-strong bg-tint-gold-soft px-3 py-2 text-xs text-gold">
+            Kampanye ini sudah ditutup, tapi kamu masih bisa memakai bingkainya.
+          </p>
+        )}
+      </header>
+
+      <FrameEditor campaign={safe} />
+    </div>
+  );
+}
