@@ -1,0 +1,41 @@
+# Self-contained deployment: the app plus Caddy for automatic TLS.
+#
+# If bingkai lands on the same VPS as apps/platform, which already runs Caddy, drop
+# the `caddy` service here and add the block from Caddyfile to that Caddy instead —
+# two Caddys cannot both hold ports 80 and 443.
+services:
+  web:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+    expose:
+      - "3000"
+    healthcheck:
+      # The landing page is static and touches no database, so it answers even if
+      # Neon is unreachable. That is deliberate: a DB outage should not make the
+      # orchestrator kill a container that is otherwise fine.
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - web
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:

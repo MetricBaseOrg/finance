@@ -1,0 +1,25 @@
+# Caddy issues and renews the certificate itself; ports 80 and 443 must be reachable
+# from the internet for the ACME challenge to complete.
+bingkai.metricbase.org {
+	encode zstd gzip
+
+	# Frames are immutable once a campaign exists, and the editor is the thing people
+	# come back to on a bad connection, so let the browser keep the static bundle.
+	@static path /_next/static/* /fonts/* /robots.txt
+	header @static Cache-Control "public, max-age=31536000, immutable"
+
+	# Manage links are secrets. Keep them out of indexes and out of referrers.
+	@manage path /kelola/*
+	header @manage {
+		X-Robots-Tag "noindex, nofollow"
+		Referrer-Policy "no-referrer"
+	}
+
+	header {
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+	}
+
+	reverse_proxy web:3000
+}

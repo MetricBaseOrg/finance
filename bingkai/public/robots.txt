@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+
+# Manage links are secrets handed to the organiser once. They must never be indexed;
+# the pages also send noindex, this is belt and braces.
+Disallow: /kelola/
+
+Sitemap: https://bingkai.metricbase.org/sitemap.xml
