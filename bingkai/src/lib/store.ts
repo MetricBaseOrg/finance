@@ -55,6 +55,24 @@ export type Tally = {
 
 export const USING_DB = Boolean(process.env.DATABASE_URL);
 
+// The file-backed fallback is a DEVELOPMENT convenience and must never engage in
+// production. Caught during deployment: with DATABASE_URL absent the app happily
+// wrote campaigns to .devdata/db.json and returned 200, so on a serverless host
+// every campaign would have been created successfully and then vanished with the
+// container, with nothing in the logs. A silent fallback that loses data is worse
+// than no fallback, so production refuses to start without a database.
+if (!USING_DB && process.env.NODE_ENV === "production") {
+  throw new Error(
+    "DATABASE_URL is not set. Refusing to start in production: the file-backed " +
+      "store is for local development only and would silently discard campaigns.",
+  );
+}
+if (!USING_DB) {
+  console.warn(
+    "[bingkai] No DATABASE_URL — using .devdata/db.json. Development only.",
+  );
+}
+
 export function newId() {
   return crypto.randomBytes(12).toString("base64url");
 }
