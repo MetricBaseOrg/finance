@@ -71,12 +71,12 @@ export default async function KelolaPage({
           ["Unduhan", downloads, pct(downloads, views)],
         ].map(([label, n, p]) => (
           <div key={String(label)} className="bg-black p-5">
-            <p className="font-mono text-[10px] uppercase tracking-wider text-gray-2">
+            <p className="font-mono text-[11px] uppercase tracking-wider text-gray-2">
               {String(label)}
             </p>
             <p className="mt-1 text-3xl font-extrabold text-white">{Number(n)}</p>
             {p !== null && (
-              <p className="mt-1 font-mono text-[10px] text-gold-dim">
+              <p className="mt-1 font-mono text-[11px] text-gold-dim">
                 {Number(p)}% dari kunjungan
               </p>
             )}
@@ -86,7 +86,7 @@ export default async function KelolaPage({
 
       <section className="grid gap-8 sm:grid-cols-2">
         <div className="space-y-3">
-          <h2 className="font-mono text-[10px] uppercase tracking-wider text-gray-2">
+          <h2 className="font-mono text-[11px] uppercase tracking-wider text-gray-2">
             Asal kunjungan
           </h2>
           {sources.length === 0 ? (
@@ -104,7 +104,7 @@ export default async function KelolaPage({
         </div>
 
         <div className="space-y-3">
-          <h2 className="font-mono text-[10px] uppercase tracking-wider text-gray-2">
+          <h2 className="font-mono text-[11px] uppercase tracking-wider text-gray-2">
             Ukuran yang diunduh
           </h2>
           {presets.length === 0 ? (
@@ -123,7 +123,7 @@ export default async function KelolaPage({
       </section>
 
       <section className="border-t border-line pt-6">
-        <h2 className="font-mono text-[10px] uppercase tracking-wider text-gray-2">
+        <h2 className="font-mono text-[11px] uppercase tracking-wider text-gray-2">
           Apa yang tidak kami simpan
         </h2>
         <p className="mt-2 max-w-2xl text-[12px] leading-relaxed text-gray-3">

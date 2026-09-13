@@ -10,9 +10,54 @@
  * an unlisted secret link is a proportionate trust model for a photo frame.
  */
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { loadImage, readAsDataURL, slugify, type FieldSpec } from "@/lib/compose";
+import { draw, loadImage, readAsDataURL, slugify, type FieldSpec } from "@/lib/compose";
+
+/**
+ * Live preview of the frame with its text fields, so an organiser positions a field by
+ * looking at it instead of guessing a 0–1 number.
+ */
+function FramePreview({
+  frame,
+  background,
+  fields,
+}: {
+  frame: { img: HTMLImageElement; w: number; h: number };
+  background: string;
+  fields: FieldSpec[];
+}) {
+  const ref = useRef<HTMLCanvasElement | null>(null);
+  const W = 320;
+  const H = Math.round((frame.h / frame.w) * W);
+  useEffect(() => {
+    const c = ref.current;
+    const ctx = c?.getContext("2d");
+    if (!c || !ctx) return;
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    c.width = W * dpr;
+    c.height = H * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    draw(ctx, W, H, {
+      photo: null,
+      frame: frame.img,
+      transform: { scale: 1, dx: 0, dy: 0, rotate: 0 },
+      fields,
+      // Show each field's label as sample text so its position is visible.
+      values: fields.map((f) => ({ id: f.id, value: f.label || "Contoh nama" })),
+      background,
+    });
+  }, [frame, background, fields, H]);
+  return (
+    <canvas
+      ref={ref}
+      role="img"
+      aria-label="Pratinjau bingkai dengan kolom teks"
+      className="mx-auto block w-full max-w-[20rem] border border-line"
+      style={{ aspectRatio: `${W} / ${H}` }}
+    />
+  );
+}
 
 type Created = { slug: string; url: string; manageUrl: string };
 
@@ -34,7 +79,13 @@ export default function BuatPage() {
   const [title, setTitle] = useState("");
   const [organiser, setOrganiser] = useState("");
   const [blurb, setBlurb] = useState("");
-  const [frame, setFrame] = useState<{ data: string; w: number; h: number } | null>(null);
+  const [frame, setFrame] = useState<{
+    data: string;
+    w: number;
+    h: number;
+    img: HTMLImageElement;
+  } | null>(null);
+  const [dragOver, setDragOver] = useState(false);
   const [fields, setFields] = useState<FieldSpec[]>([]);
   const [background, setBackground] = useState("#0a0a0a");
   const [busy, setBusy] = useState(false);
@@ -57,7 +108,7 @@ export default function BuatPage() {
     try {
       const data = await readAsDataURL(file);
       const img = await loadImage(data);
-      setFrame({ data, w: img.naturalWidth, h: img.naturalHeight });
+      setFrame({ data, w: img.naturalWidth, h: img.naturalHeight, img });
     } catch {
       setErr("Gagal membaca berkas.");
     }
@@ -93,6 +144,14 @@ export default function BuatPage() {
       setBusy(false);
     }
   };
+
+  // The manage link is shown exactly once. Ask before the tab closes on it.
+  useEffect(() => {
+    if (!done) return;
+    const warn = (e: BeforeUnloadEvent) => e.preventDefault();
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [done]);
 
   if (done) {
     const origin = typeof window !== "undefined" ? window.location.origin : "";
@@ -139,7 +198,7 @@ export default function BuatPage() {
       </div>
 
       <label className="block space-y-1">
-        <span className="font-mono text-[10px] uppercase tracking-wider text-gray-2">
+        <span className="font-mono text-[11px] uppercase tracking-wider text-gray-2">
           Judul kampanye
         </span>
         <input
@@ -153,7 +212,7 @@ export default function BuatPage() {
 
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="block space-y-1">
-          <span className="font-mono text-[10px] uppercase tracking-wider text-gray-2">
+          <span className="font-mono text-[11px] uppercase tracking-wider text-gray-2">
             Penyelenggara
           </span>
           <input
@@ -165,7 +224,7 @@ export default function BuatPage() {
           />
         </label>
         <label className="block space-y-1">
-          <span className="font-mono text-[10px] uppercase tracking-wider text-gray-2">
+          <span className="font-mono text-[11px] uppercase tracking-wider text-gray-2">
             Warna latar
           </span>
           <input
@@ -178,7 +237,7 @@ export default function BuatPage() {
       </div>
 
       <label className="block space-y-1">
-        <span className="font-mono text-[10px] uppercase tracking-wider text-gray-2">
+        <span className="font-mono text-[11px] uppercase tracking-wider text-gray-2">
           Keterangan singkat
         </span>
         <textarea
@@ -186,20 +245,38 @@ export default function BuatPage() {
           onChange={(e) => setBlurb(e.target.value)}
           maxLength={280}
           rows={2}
+          placeholder="Ayo pasang twibbon ini untuk merayakan kelulusan kita!"
           className="w-full border border-line bg-bg-elev px-3 py-2.5 text-sm outline-none focus:border-line-strong"
         />
       </label>
 
       <div className="space-y-2">
-        <span className="font-mono text-[10px] uppercase tracking-wider text-gray-2">
+        <span className="font-mono text-[11px] uppercase tracking-wider text-gray-2">
           Bingkai (PNG transparan)
         </span>
         <button
           type="button"
           onClick={() => fileRef.current?.click()}
-          className="flex w-full items-center justify-center border border-dashed border-line bg-bg-elev px-4 py-8 text-sm text-gray-2 hover:bg-bg-hover"
+          onDragOver={(e) => {
+            e.preventDefault();
+            setDragOver(true);
+          }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setDragOver(false);
+            void pickFrame(e.dataTransfer.files?.[0] ?? null);
+          }}
+          className={`flex w-full flex-col items-center justify-center gap-1 border border-dashed px-4 py-8 text-sm hover:bg-bg-hover ${
+            dragOver ? "border-gold bg-tint-gold-soft text-gold" : "border-line bg-bg-elev text-gray-2"
+          }`}
         >
-          {frame ? `Terpasang · ${frame.w}×${frame.h}` : "Pilih berkas PNG"}
+          <span>
+            {frame ? `Terpasang · ${frame.w}×${frame.h} — ganti` : "Pilih atau seret berkas PNG ke sini"}
+          </span>
+          <span className="text-[11px] text-gray-3">
+            Bagian untuk foto harus transparan · disarankan 1080×1080 · maks 3 MB
+          </span>
         </button>
         <input
           ref={fileRef}
@@ -209,26 +286,25 @@ export default function BuatPage() {
           onChange={(e) => pickFrame(e.target.files?.[0] ?? null)}
         />
         {frame && (
-          <div
-            className="mx-auto mt-2 w-40 border border-line"
-            style={{ background, aspectRatio: `${frame.w} / ${frame.h}` }}
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={frame.data} alt="Pratinjau bingkai" className="h-full w-full" />
+          <div className="pt-2">
+            <FramePreview frame={frame} background={background} fields={fields} />
+            <p className="mt-2 text-center text-[11px] text-gray-3">
+              Warna latar terlihat di bagian transparan sampai pendukung memilih foto.
+            </p>
           </div>
         )}
       </div>
 
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <span className="font-mono text-[10px] uppercase tracking-wider text-gray-2">
+          <span className="font-mono text-[11px] uppercase tracking-wider text-gray-2">
             Kolom teks · opsional
           </span>
           {fields.length < 3 && (
             <button
               type="button"
               onClick={() => setFields((f) => [...f, DEFAULT_FIELD(f.length + 1)])}
-              className="font-mono text-[10px] uppercase tracking-wider text-gold hover:text-gold-bright"
+              className="font-mono text-[11px] uppercase tracking-wider text-gold hover:text-gold-bright"
             >
               + Tambah kolom
             </button>
@@ -239,51 +315,76 @@ export default function BuatPage() {
           kelas, atau unit kerja.
         </p>
         {fields.map((f, i) => (
-          <div key={f.id} className="grid grid-cols-[1fr_5rem_5rem_2rem] gap-2">
-            <input
-              value={f.label}
-              onChange={(e) =>
-                setFields((p) =>
-                  p.map((x, j) => (i === j ? { ...x, label: e.target.value } : x)),
-                )
-              }
-              placeholder="Label"
-              className="border border-line bg-bg-elev px-2 py-2 text-xs outline-none focus:border-line-strong"
-            />
-            <input
-              type="number"
-              step={0.01}
-              min={0}
-              max={1}
-              value={f.y}
-              onChange={(e) =>
-                setFields((p) =>
-                  p.map((x, j) => (i === j ? { ...x, y: Number(e.target.value) } : x)),
-                )
-              }
-              title="Posisi vertikal (0 atas, 1 bawah)"
-              className="border border-line bg-bg-elev px-2 py-2 text-xs outline-none"
-            />
-            <input
-              type="color"
-              value={f.color}
-              onChange={(e) =>
-                setFields((p) =>
-                  p.map((x, j) => (i === j ? { ...x, color: e.target.value } : x)),
-                )
-              }
-              className="border border-line bg-bg-elev"
-            />
-            <button
-              type="button"
-              onClick={() => setFields((p) => p.filter((_, j) => j !== i))}
-              className="text-gray-3 hover:text-down"
-              aria-label="Hapus kolom"
-            >
-              ×
-            </button>
+          <div key={f.id} className="space-y-2 border border-line p-3">
+            <div className="grid grid-cols-[1fr_3rem_2.5rem] gap-2">
+              <input
+                value={f.label}
+                onChange={(e) =>
+                  setFields((p) =>
+                    p.map((x, j) => (i === j ? { ...x, label: e.target.value } : x)),
+                  )
+                }
+                placeholder="Label, misal Nama"
+                aria-label={`Label kolom ${i + 1}`}
+                className="border border-line bg-bg-elev px-2 py-2 text-sm outline-none focus:border-line-strong"
+              />
+              <input
+                type="color"
+                value={f.color}
+                aria-label={`Warna teks kolom ${i + 1}`}
+                onChange={(e) =>
+                  setFields((p) =>
+                    p.map((x, j) => (i === j ? { ...x, color: e.target.value } : x)),
+                  )
+                }
+                className="h-full w-full border border-line bg-bg-elev"
+              />
+              <button
+                type="button"
+                onClick={() => setFields((p) => p.filter((_, j) => j !== i))}
+                className="border border-line text-lg text-gray-2 hover:text-down"
+                aria-label={`Hapus kolom ${i + 1}`}
+              >
+                ×
+              </button>
+            </div>
+            <div className="grid grid-cols-[4.5rem_1fr] items-center gap-x-3 gap-y-2 text-[11px] text-gray-2">
+              <span>Posisi</span>
+              <input
+                type="range"
+                min={0.03}
+                max={0.97}
+                step={0.005}
+                value={f.y}
+                aria-label={`Posisi vertikal kolom ${i + 1}`}
+                onChange={(e) =>
+                  setFields((p) =>
+                    p.map((x, j) => (i === j ? { ...x, y: Number(e.target.value) } : x)),
+                  )
+                }
+                className="h-1 accent-gold"
+              />
+              <span>Ukuran</span>
+              <input
+                type="range"
+                min={0.02}
+                max={0.1}
+                step={0.001}
+                value={f.size}
+                aria-label={`Ukuran teks kolom ${i + 1}`}
+                onChange={(e) =>
+                  setFields((p) =>
+                    p.map((x, j) => (i === j ? { ...x, size: Number(e.target.value) } : x)),
+                  )
+                }
+                className="h-1 accent-gold"
+              />
+            </div>
           </div>
         ))}
+        {fields.length > 0 && !frame && (
+          <p className="text-[11px] text-gray-3">Unggah bingkai untuk melihat posisi teks.</p>
+        )}
       </div>
 
       {err && <p className="border border-down/40 px-3 py-2 text-xs text-down">{err}</p>}
@@ -312,7 +413,7 @@ function Field({
   const [copied, setCopied] = useState(false);
   return (
     <div className={`border p-3 ${warn ? "border-line-strong" : "border-line"}`}>
-      <p className="font-mono text-[10px] uppercase tracking-wider text-gray-2">
+      <p className="font-mono text-[11px] uppercase tracking-wider text-gray-2">
         {label}
       </p>
       <div className="mt-1 flex items-center gap-2">
@@ -326,7 +427,7 @@ function Field({
             setCopied(true);
             setTimeout(() => setCopied(false), 1500);
           }}
-          className="shrink-0 font-mono text-[10px] uppercase tracking-wider text-gold"
+          className="shrink-0 font-mono text-[11px] uppercase tracking-wider text-gold"
         >
           {copied ? "Tersalin" : "Salin"}
         </button>

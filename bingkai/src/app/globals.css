@@ -46,7 +46,8 @@
   --white: #ffffff;
   --gray-1: #e5e5e5;
   --gray-2: #999999;
-  --gray-3: #555555;
+  /* #555 was 2.6:1 on the black ground and it carries helper text; #808080 is 5:1. */
+  --gray-3: #808080;
   --gray-4: #2a2a2a;
   --line: rgba(255, 255, 255, 0.06);
   --line-strong: rgba(201, 168, 76, 0.3);
@@ -75,7 +76,7 @@ a {
 
 .eyebrow {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--gold);

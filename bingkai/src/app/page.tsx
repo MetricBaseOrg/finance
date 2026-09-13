@@ -48,13 +48,71 @@ const VS = [
   ["Buat kampanye tanpa akun", true, false],
   ["Kolom nama di dalam bingkai", true, false],
   ["Ekspor Story, feed, dan cetak", true, false],
-  ["Unduh massal dari daftar CSV", true, false],
-  ["Jalan saat internet lemah", true, false],
+  ["Tetap jalan walau sinyal hilang setelah halaman terbuka", true, false],
 ] as const;
+
+const FAQ = [
+  {
+    q: "Apa itu twibbon?",
+    a: "Twibbon adalah bingkai foto untuk kampanye, acara, atau perayaan — misalnya wisuda, HUT perusahaan, atau kegiatan komunitas. Pendukung memasang fotonya di dalam bingkai lalu membagikannya di media sosial.",
+  },
+  {
+    q: "Apakah Bingkai benar-benar gratis dan tanpa watermark?",
+    a: "Ya. Membuat kampanye, memakai bingkai, dan mengunduh hasil semuanya gratis. Tidak ada watermark, tidak ada iklan, dan tidak ada versi berbayar untuk menghilangkannya.",
+  },
+  {
+    q: "Apakah foto saya diunggah ke server?",
+    a: "Tidak. Foto dibaca dan digabungkan dengan bingkai langsung di browser perangkatmu. Yang dikirim dari server hanya gambar bingkainya. Kamu bisa membuktikannya lewat tab Network di browser.",
+  },
+  {
+    q: "Bagaimana cara membuat twibbon sendiri?",
+    a: "Siapkan desain bingkai sebagai PNG dengan bagian tengah transparan (maksimal 3 MB), buka halaman Buat kampanye, isi judul, unggah PNG-nya, lalu bagikan tautan yang kamu dapat. Tidak perlu mendaftar.",
+  },
+  {
+    q: "Ukuran bingkai yang disarankan berapa?",
+    a: "1080×1080 piksel untuk feed Instagram dan Facebook. Pendukung tetap bisa mengunduh versi Story, Portrait, Wide, Profile, dan cetak dari bingkai yang sama.",
+  },
+  {
+    q: "Bagaimana kalau tautan kelola hilang?",
+    a: "Tautan kelola adalah satu-satunya kunci kampanye karena kami tidak meminta email. Simpan tautan itu saat kampanye dibuat — kampanyenya tetap bisa dipakai pendukung, tetapi statistiknya tidak bisa dibuka tanpa tautan tersebut.",
+  },
+];
+
+const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? "https://bingkai.metricbase.org";
+
+const JSON_LD = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebApplication",
+      name: "Bingkai",
+      url: SITE,
+      applicationCategory: "PhotographyApplication",
+      operatingSystem: "Web",
+      inLanguage: "id",
+      description:
+        "Buat dan pakai twibbon kampanye tanpa akun, tanpa watermark, tanpa iklan. Foto diproses di perangkat pengguna.",
+      offers: { "@type": "Offer", price: "0", priceCurrency: "IDR" },
+      publisher: { "@type": "Organization", name: "MetricBase", url: "https://metricbase.org" },
+    },
+    {
+      "@type": "FAQPage",
+      mainEntity: FAQ.map((f) => ({
+        "@type": "Question",
+        name: f.q,
+        acceptedAnswer: { "@type": "Answer", text: f.a },
+      })),
+    },
+  ],
+};
 
 export default function Home() {
   return (
     <div className="space-y-20">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(JSON_LD) }}
+      />
       <section className="space-y-6">
         <p className="eyebrow">Bingkai kampanye</p>
         <h1 className="max-w-3xl text-4xl font-extrabold leading-[1.1] tracking-tight text-white sm:text-6xl">
@@ -89,7 +147,7 @@ export default function Home() {
         <div className="grid gap-px border border-line bg-line sm:grid-cols-2 lg:grid-cols-3">
           {WHY.map((w) => (
             <div key={w.k} className="bg-black p-5">
-              <p className="font-mono text-[10px] tracking-widest text-gold-dim">{w.k}</p>
+              <p className="font-mono text-[11px] tracking-widest text-gold-dim">{w.k}</p>
               <h3 className="mt-2 text-base font-bold text-white">{w.h}</h3>
               <p className="mt-2 text-[13px] leading-relaxed text-gray-2">{w.p}</p>
             </div>
@@ -104,7 +162,7 @@ export default function Home() {
         <div className="overflow-x-auto border border-line">
           <table className="w-full min-w-[34rem] text-left text-sm">
             <thead>
-              <tr className="border-b border-line font-mono text-[10px] uppercase tracking-wider text-gray-3">
+              <tr className="border-b border-line font-mono text-[11px] uppercase tracking-wider text-gray-3">
                 <th className="px-4 py-3 font-normal">Kemampuan</th>
                 <th className="px-4 py-3 text-center font-normal text-gold">Bingkai</th>
                 <th className="px-4 py-3 text-center font-normal">Layanan lain</th>
@@ -139,7 +197,7 @@ export default function Home() {
             ["Lihat hasilnya", "Kunjungan dan unduhan, tanpa melacak siapa pun."],
           ].map(([h, p], i) => (
             <li key={h} className="bg-black p-5">
-              <p className="font-mono text-[10px] tracking-widest text-gold-dim">
+              <p className="font-mono text-[11px] tracking-widest text-gold-dim">
                 {String(i + 1).padStart(2, "0")}
               </p>
               <h3 className="mt-2 text-base font-bold text-white">{h}</h3>
@@ -147,6 +205,29 @@ export default function Home() {
             </li>
           ))}
         </ol>
+        <Link
+          href="/buat"
+          className="inline-block border border-line-strong bg-tint-gold-soft px-5 py-3 text-sm font-semibold text-gold hover:bg-tint-gold-hover"
+        >
+          Mulai buat twibbon
+        </Link>
+      </section>
+
+      <section id="tanya" className="space-y-5">
+        <h2 className="text-2xl font-bold tracking-tight text-white">Pertanyaan umum</h2>
+        <div className="divide-y divide-line border border-line">
+          {FAQ.map((f) => (
+            <details key={f.q} className="group p-5">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-base font-semibold text-white">
+                {f.q}
+                <span className="font-mono text-gold transition-transform group-open:rotate-45">
+                  +
+                </span>
+              </summary>
+              <p className="mt-3 text-[14px] leading-relaxed text-gray-2">{f.a}</p>
+            </details>
+          ))}
+        </div>
       </section>
     </div>
   );

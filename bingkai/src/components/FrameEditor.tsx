@@ -55,6 +55,35 @@ function ping(slug: string, kind: string, preset?: string) {
   }
 }
 
+/** Supporters pass the campaign on in WhatsApp groups; make that one tap. */
+function CopyLink({ slug, title }: { slug: string; title: string }) {
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    const url = `${window.location.origin}/k/${slug}`;
+    const nav = navigator as Navigator & { share?: (d: ShareData) => Promise<void> };
+    try {
+      if (nav.share && window.matchMedia("(pointer: coarse)").matches) {
+        await nav.share({ title, url });
+        return;
+      }
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      /* dismissed */
+    }
+  };
+  return (
+    <button
+      type="button"
+      onClick={copy}
+      className="w-full border border-line px-4 py-2.5 text-[13px] text-gray-2 transition-colors hover:bg-bg-hover hover:text-gold"
+    >
+      {copied ? "Tautan tersalin ✓" : "Ajak teman: salin tautan kampanye"}
+    </button>
+  );
+}
+
 export default function FrameEditor({ campaign }: { campaign: EditorCampaign }) {
   const [frame, setFrame] = useState<HTMLImageElement | null>(null);
   const [photo, setPhoto] = useState<HTMLImageElement | null>(null);
@@ -276,6 +305,12 @@ export default function FrameEditor({ campaign }: { campaign: EditorCampaign }) 
         >
           <canvas
             ref={canvasRef}
+            role="img"
+            aria-label={
+              photo
+                ? `Pratinjau fotomu di bingkai ${campaign.title}`
+                : `Bingkai ${campaign.title}, belum ada foto`
+            }
             className="h-full w-full touch-none select-none"
             style={{ cursor: photo ? "grab" : "pointer" }}
             onPointerDown={onPointerDown}
@@ -324,7 +359,7 @@ export default function FrameEditor({ campaign }: { campaign: EditorCampaign }) 
 
         {photo && (
           <div className="mx-auto mt-3 flex max-w-[28rem] items-center gap-3">
-            <label className="font-mono text-[10px] uppercase tracking-wider text-gray-2">
+            <label className="font-mono text-[11px] uppercase tracking-wider text-gray-2">
               Zoom
             </label>
             <input
@@ -333,10 +368,11 @@ export default function FrameEditor({ campaign }: { campaign: EditorCampaign }) 
               max={6}
               step={0.01}
               value={t.scale}
+              aria-label="Zoom foto"
               onChange={(e) => setT((p) => ({ ...p, scale: Number(e.target.value) }))}
               className="h-1 flex-1 accent-gold"
             />
-            <label className="font-mono text-[10px] uppercase tracking-wider text-gray-2">
+            <label className="font-mono text-[11px] uppercase tracking-wider text-gray-2">
               Putar
             </label>
             <input
@@ -345,13 +381,14 @@ export default function FrameEditor({ campaign }: { campaign: EditorCampaign }) 
               max={30}
               step={0.5}
               value={t.rotate}
+              aria-label="Putar foto"
               onChange={(e) => setT((p) => ({ ...p, rotate: Number(e.target.value) }))}
               className="h-1 w-20 accent-gold"
             />
             <button
               type="button"
               onClick={() => setT(IDENTITY)}
-              className="font-mono text-[10px] uppercase tracking-wider text-gold hover:text-gold-bright"
+              className="font-mono text-[11px] uppercase tracking-wider text-gold hover:text-gold-bright"
             >
               Reset
             </button>
@@ -362,7 +399,7 @@ export default function FrameEditor({ campaign }: { campaign: EditorCampaign }) 
             <button
               type="button"
               onClick={() => fileRef.current?.click()}
-              className="border border-line px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider text-gold hover:bg-bg-hover"
+              className="border border-line px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider text-gold hover:bg-bg-hover"
             >
               Ganti foto
             </button>
@@ -376,7 +413,7 @@ export default function FrameEditor({ campaign }: { campaign: EditorCampaign }) 
       {/* ---- controls ---- */}
       <div className="space-y-5">
         <div>
-          <p className="mb-2 font-mono text-[10px] uppercase tracking-wider text-gray-2">
+          <p className="mb-2 font-mono text-[11px] uppercase tracking-wider text-gray-2">
             Ukuran
           </p>
           <div className="grid grid-cols-2 gap-1.5">
@@ -392,7 +429,7 @@ export default function FrameEditor({ campaign }: { campaign: EditorCampaign }) 
                 }`}
               >
                 <span className="block text-xs font-semibold">{p.label}</span>
-                <span className="block font-mono text-[9px] text-gray-3">
+                <span className="block font-mono text-[10px] text-gray-3">
                   {p.w}×{p.h}
                 </span>
               </button>
@@ -402,7 +439,7 @@ export default function FrameEditor({ campaign }: { campaign: EditorCampaign }) 
 
         {campaign.fields.length > 0 && (
           <div className="space-y-2">
-            <p className="font-mono text-[10px] uppercase tracking-wider text-gray-2">
+            <p className="font-mono text-[11px] uppercase tracking-wider text-gray-2">
               Isi data
             </p>
             {campaign.fields.map((f) => (
@@ -427,31 +464,45 @@ export default function FrameEditor({ campaign }: { campaign: EditorCampaign }) 
         )}
 
         <div className="space-y-2">
+          {/* Until there is a photo the only useful action is picking one, so the
+              primary button says that instead of offering a share that cannot work. */}
+          {photo ? (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={doShare}
+              className="w-full border border-line-strong bg-tint-gold-soft px-4 py-3 text-sm font-semibold text-gold transition-colors hover:bg-tint-gold-hover disabled:opacity-50"
+            >
+              {busy ? "Memproses…" : "Bagikan"}
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              className="w-full border border-line-strong bg-tint-gold-soft px-4 py-3 text-sm font-semibold text-gold transition-colors hover:bg-tint-gold-hover"
+            >
+              Pilih foto
+            </button>
+          )}
           <button
             type="button"
-            disabled={busy}
-            onClick={doShare}
-            className="w-full border border-line-strong bg-tint-gold-soft px-4 py-3 text-sm font-semibold text-gold transition-colors hover:bg-tint-gold-hover disabled:opacity-50"
-          >
-            {busy ? "Memproses…" : "Bagikan"}
-          </button>
-          <button
-            type="button"
-            disabled={busy}
+            disabled={busy || !photo}
             onClick={doDownload}
-            className="w-full border border-line px-4 py-3 text-sm text-gray-1 transition-colors hover:bg-bg-hover disabled:opacity-50"
+            className="w-full border border-line px-4 py-3 text-sm text-gray-1 transition-colors hover:bg-bg-hover disabled:cursor-not-allowed disabled:opacity-40"
           >
-            Unduh {preset.label}
+            Unduh {preset.label} · {preset.w}×{preset.h}
           </button>
           <button
             type="button"
-            disabled={busy}
+            disabled={busy || !photo}
             onClick={doDownloadAll}
-            className="w-full px-4 py-2 font-mono text-[10px] uppercase tracking-wider text-gray-2 hover:text-gold"
+            className="w-full px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-gray-2 hover:text-gold disabled:cursor-not-allowed disabled:opacity-40"
           >
             Unduh semua ukuran (ZIP)
           </button>
         </div>
+
+        <CopyLink slug={campaign.slug} title={campaign.title} />
 
         <p className="border-t border-line pt-4 text-[11px] leading-relaxed text-gray-3">
           Tanpa watermark. Tanpa akun. Tanpa iklan. Foto kamu tidak pernah dikirim ke

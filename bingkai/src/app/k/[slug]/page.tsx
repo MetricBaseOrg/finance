@@ -12,12 +12,17 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const c = await getCampaign(slug);
-  if (!c) return { title: "Kampanye tidak ditemukan" };
+  if (!c) return { title: "Kampanye tidak ditemukan", robots: { index: false } };
+  const title = `Twibbon ${c.title}`;
+  const description =
+    c.blurb ??
+    `Pasang twibbon ${c.title} di fotomu. Gratis, tanpa unggah, tanpa watermark, tanpa akun.`;
   return {
-    title: c.title,
-    description:
-      c.blurb ??
-      `Pasang bingkai ${c.title} di fotomu. Tanpa unggah, tanpa watermark, tanpa akun.`,
+    title,
+    description,
+    alternates: { canonical: `/k/${c.slug}` },
+    openGraph: { title, description, url: `/k/${c.slug}`, type: "website", locale: "id_ID" },
+    twitter: { card: "summary_large_image", title, description },
   };
 }
 
