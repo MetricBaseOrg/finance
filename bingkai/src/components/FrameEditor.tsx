@@ -22,6 +22,7 @@ import {
   draw,
   download,
   exportBlob,
+  isInAppBrowser,
   loadImage,
   readAsDataURL,
   type FieldSpec,
@@ -96,6 +97,10 @@ export default function FrameEditor({ campaign }: { campaign: EditorCampaign }) 
   );
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
+  // The exported image, shown after every save. Where a download silently does nothing
+  // (in-app browsers, some iOS setups) a long-press on this still saves it to the gallery.
+  const [result, setResult] = useState<string | null>(null);
+  const [inApp, setInApp] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
 
@@ -137,7 +142,16 @@ export default function FrameEditor({ campaign }: { campaign: EditorCampaign }) 
   // the input already holds fires no change event. Start every visit with it empty.
   useEffect(() => {
     if (fileRef.current) fileRef.current.value = "";
+    setInApp(isInAppBrowser(navigator.userAgent));
   }, []);
+
+  const showResult = async (blob: Blob) => {
+    try {
+      setResult(await readAsDataURL(blob));
+    } catch {
+      /* the download itself may still have worked */
+    }
+  };
 
   // A slow decode of an earlier pick must not overwrite a later one.
   const pickSeq = useRef(0);
@@ -162,6 +176,7 @@ export default function FrameEditor({ campaign }: { campaign: EditorCampaign }) 
         setPhoto(img);
         setT(IDENTITY);
         setNote(null);
+        setResult(null);
         ping(campaign.slug, "PHOTO_PICKED");
       } catch {
         if (seq !== pickSeq.current) return;
@@ -233,8 +248,9 @@ export default function FrameEditor({ campaign }: { campaign: EditorCampaign }) 
     try {
       const blob = await exportBlob(input, preset);
       download(blob, filename(preset));
+      await showResult(blob);
       ping(campaign.slug, "DOWNLOAD", preset.id);
-      setNote(`Tersimpan · ${preset.w}×${preset.h}`);
+      setNote(`Diunduh · ${preset.w}×${preset.h}`);
     } catch {
       setNote("Gagal menyimpan. Coba ukuran lain.");
     } finally {
@@ -285,6 +301,7 @@ export default function FrameEditor({ campaign }: { campaign: EditorCampaign }) 
       } else {
         // Desktop has no share sheet worth using; a download is the honest fallback.
         download(blob, filename(preset));
+        await showResult(blob);
         ping(campaign.slug, "DOWNLOAD", preset.id);
         setNote("Perangkat ini tidak punya menu bagikan — file diunduh.");
       }
@@ -353,8 +370,34 @@ export default function FrameEditor({ campaign }: { campaign: EditorCampaign }) 
           }}
         />
 
+        {inApp && (
+          <p className="mx-auto mt-3 max-w-[28rem] border border-line-strong bg-tint-gold-soft px-3 py-2 text-center text-[11px] text-gold">
+            Kamu membuka halaman ini dari dalam aplikasi, yang sering memblokir unduhan.
+            Kalau gagal, buka menu ⋮ lalu pilih &quot;Buka di browser&quot; (Chrome/Safari),
+            atau tekan lama gambar hasil di bawah.
+          </p>
+        )}
+
         {note && (
           <p className="mx-auto mt-3 max-w-[28rem] text-center text-[11px] text-gold">{note}</p>
+        )}
+
+        {result && (
+          <div className="mx-auto mt-3 max-w-[28rem] border border-line bg-bg-card p-3 text-center">
+            <p className="mb-2 text-[11px] text-gray-2">
+              File tidak muncul? <span className="text-gold">Tekan lama gambar ini</span> lalu
+              pilih &quot;Simpan gambar&quot;.
+            </p>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={result} alt={`Hasil bingkai ${campaign.title}`} className="mx-auto w-full" />
+            <button
+              type="button"
+              onClick={() => setResult(null)}
+              className="mt-2 font-mono text-[11px] uppercase tracking-wider text-gray-2 hover:text-gold"
+            >
+              Tutup
+            </button>
+          </div>
         )}
 
         {photo && (

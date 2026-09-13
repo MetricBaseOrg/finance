@@ -114,7 +114,8 @@ type PrismaLike = {
     update: (a: unknown) => Promise<unknown>;
   };
   event: {
-    upsert: (a: unknown) => Promise<unknown>;
+    updateMany: (a: unknown) => Promise<{ count: number }>;
+    create: (a: unknown) => Promise<unknown>;
     findMany: (a: unknown) => Promise<unknown>;
   };
 };
@@ -247,19 +248,18 @@ export async function recordEvent(
     return;
   }
   const p = await db();
-  await p.event.upsert({
-    where: {
-      campaignId_kind_refHost_preset_hour: {
-        campaignId,
-        kind,
-        refHost,
-        preset,
-        hour: new Date(hour),
-      },
-    },
-    create: { campaignId, kind, refHost, preset, hour: new Date(hour), count: 1 },
-    update: { count: { increment: 1 } },
+  // Not upsert: Prisma rejects null inside a compound-unique `where`, and VIEW and
+  // PHOTO_PICKED always have a null preset, so every one of those threw a 500. Postgres
+  // also treats NULLs as distinct in the unique index, so a rare race can leave two rows
+  // for one bucket; readers sum counts, so that is harmless.
+  const at = new Date(hour);
+  const { count } = await p.event.updateMany({
+    where: { campaignId, kind, refHost, preset, hour: at },
+    data: { count: { increment: 1 } },
   });
+  if (count === 0) {
+    await p.event.create({ data: { campaignId, kind, refHost, preset, hour: at, count: 1 } });
+  }
 }
 
 export async function tallies(campaignId: string): Promise<Tally[]> {

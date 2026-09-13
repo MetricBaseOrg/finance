@@ -180,7 +180,7 @@ export function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
-export function readAsDataURL(file: File): Promise<string> {
+export function readAsDataURL(file: Blob): Promise<string> {
   return new Promise((res, rej) => {
     const fr = new FileReader();
     fr.onload = () => res(String(fr.result));
@@ -199,6 +199,17 @@ export function download(blob: Blob, filename: string) {
   a.remove();
   // Revoke on the next tick; revoking synchronously cancels the download in Safari.
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+/**
+ * In-app browsers (Instagram, Facebook, TikTok, LINE, and WhatsApp/others on iOS) ignore
+ * `<a download>` on a blob URL without any error, so the button looks dead. These links
+ * mostly arrive through exactly those apps.
+ */
+export function isInAppBrowser(ua: string) {
+  return /FBAN|FBAV|FB_IAB|Instagram|Line\/|TikTok|musical_ly|BytedanceWebview|WhatsApp|Snapchat|Twitter|; wv\)/i.test(
+    ua,
+  );
 }
 
 export function slugify(s: string) {
