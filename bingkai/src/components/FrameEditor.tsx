@@ -104,22 +104,43 @@ export default function FrameEditor({ campaign }: { campaign: EditorCampaign }) 
     draw(ctx, previewW, previewH, input);
   }, [input, previewW, previewH]);
 
+  // Browsers can restore a file input's selection across a reload, and picking the file
+  // the input already holds fires no change event. Start every visit with it empty.
+  useEffect(() => {
+    if (fileRef.current) fileRef.current.value = "";
+  }, []);
+
+  // A slow decode of an earlier pick must not overwrite a later one.
+  const pickSeq = useRef(0);
+
   const pick = useCallback(
     async (file: File | null) => {
       if (!file) return;
-      if (!file.type.startsWith("image/")) {
+      // Some Android and Windows pickers report an empty type for HEIC and friends, so
+      // fall back to the extension instead of rejecting a real photo.
+      const looksImage =
+        file.type.startsWith("image/") ||
+        (!file.type && /\.(jpe?g|png|gif|webp|avif|bmp|heic|heif)$/i.test(file.name));
+      if (!looksImage) {
         setNote("File itu bukan gambar.");
         return;
       }
+      const seq = ++pickSeq.current;
       try {
         const url = await readAsDataURL(file);
         const img = await loadImage(url);
+        if (seq !== pickSeq.current) return;
         setPhoto(img);
         setT(IDENTITY);
         setNote(null);
         ping(campaign.slug, "PHOTO_PICKED");
       } catch {
-        setNote("Gagal membaca foto. Coba foto lain.");
+        if (seq !== pickSeq.current) return;
+        setNote(
+          /\.(heic|heif)$/i.test(file.name)
+            ? "Browser ini tidak bisa membuka foto HEIC. Coba foto JPG/PNG, atau screenshot fotonya."
+            : "Gagal membaca foto. Coba foto lain.",
+        );
       }
     },
     [campaign.slug],
@@ -289,8 +310,17 @@ export default function FrameEditor({ campaign }: { campaign: EditorCampaign }) 
           type="file"
           accept="image/*"
           className="hidden"
-          onChange={(e) => pick(e.target.files?.[0] ?? null)}
+          onChange={(e) => {
+            const file = e.target.files?.[0] ?? null;
+            // Clear so choosing the same file again still fires a change.
+            e.target.value = "";
+            void pick(file);
+          }}
         />
+
+        {note && (
+          <p className="mx-auto mt-3 max-w-[28rem] text-center text-[11px] text-gold">{note}</p>
+        )}
 
         {photo && (
           <div className="mx-auto mt-3 flex max-w-[28rem] items-center gap-3">
@@ -324,6 +354,17 @@ export default function FrameEditor({ campaign }: { campaign: EditorCampaign }) 
               className="font-mono text-[10px] uppercase tracking-wider text-gold hover:text-gold-bright"
             >
               Reset
+            </button>
+          </div>
+        )}
+        {photo && (
+          <div className="mx-auto mt-3 max-w-[28rem] text-center">
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              className="border border-line px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider text-gold hover:bg-bg-hover"
+            >
+              Ganti foto
             </button>
           </div>
         )}
@@ -411,8 +452,6 @@ export default function FrameEditor({ campaign }: { campaign: EditorCampaign }) 
             Unduh semua ukuran (ZIP)
           </button>
         </div>
-
-        {note && <p className="text-[11px] text-gold">{note}</p>}
 
         <p className="border-t border-line pt-4 text-[11px] leading-relaxed text-gray-3">
           Tanpa watermark. Tanpa akun. Tanpa iklan. Foto kamu tidak pernah dikirim ke
