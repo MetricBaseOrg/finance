@@ -15,6 +15,7 @@ import {
   SaveLinkActions,
   type FrameState,
 } from "@/components/FrameSetup";
+import { CATEGORIES } from "@/lib/validate";
 
 type Editable = {
   slug: string;
@@ -27,6 +28,8 @@ type Editable = {
   frameW: number;
   frameH: number;
   closedAt: string | null;
+  listed: boolean;
+  category: string | null;
 };
 
 const label = "font-mono text-[11px] uppercase tracking-wider text-gray-2";
@@ -93,6 +96,7 @@ export default function CampaignSettings({
   const [title, setTitle] = useState(campaign.title);
   const [organiser, setOrganiser] = useState(campaign.organiser ?? "");
   const [blurb, setBlurb] = useState(campaign.blurb ?? "");
+  const [category, setCategory] = useState(campaign.category ?? "");
   const [background, setBackground] = useState(campaign.background);
   const [fields, setFields] = useState<FieldSpec[]>(campaign.fields);
   const [frame, setFrame] = useState<FrameState | null>(null);
@@ -117,9 +121,10 @@ export default function CampaignSettings({
       organiser !== (saved.organiser ?? "") ||
       blurb !== (saved.blurb ?? "") ||
       background !== saved.background ||
+      category !== (saved.category ?? "") ||
       JSON.stringify(fields) !== JSON.stringify(saved.fields) ||
       newFrame,
-    [title, organiser, blurb, background, fields, newFrame, saved],
+    [title, organiser, blurb, category, background, fields, newFrame, saved],
   );
 
   useEffect(() => {
@@ -134,6 +139,7 @@ export default function CampaignSettings({
     setOrganiser(saved.organiser ?? "");
     setBlurb(saved.blurb ?? "");
     setBackground(saved.background);
+    setCategory(saved.category ?? "");
     setFields(saved.fields);
     setNewFrame(false);
     setWarning(null);
@@ -146,7 +152,7 @@ export default function CampaignSettings({
     setBusy("save");
     setMsg(null);
     try {
-      const body: Record<string, unknown> = { title, organiser, blurb, background, fields };
+      const body: Record<string, unknown> = { title, organiser, blurb, category, background, fields };
       if (newFrame && frame) Object.assign(body, { frameData: frame.data, frameW: frame.w, frameH: frame.h });
       await call(api, "PATCH", body);
       setSaved({
@@ -155,6 +161,7 @@ export default function CampaignSettings({
         organiser: organiser.trim() || null,
         blurb: blurb.trim() || null,
         background,
+        category: category || null,
         fields,
         ...(newFrame && frame ? { frameData: frame.data, frameW: frame.w, frameH: frame.h } : {}),
       });
@@ -184,6 +191,23 @@ export default function CampaignSettings({
       router.refresh();
     } catch (e) {
       setStatusMsg(e instanceof Error ? e.message : "Gagal mengubah status.");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  // ---- directory listing ----
+  const [listed, setListed] = useState(campaign.listed);
+  const [listMsg, setListMsg] = useState<string | null>(null);
+  const toggleListed = async () => {
+    setBusy("listed");
+    setListMsg(null);
+    try {
+      const j = await call(api, "PATCH", { listed: !listed });
+      setListed(Boolean(j.listed));
+      router.refresh();
+    } catch (e) {
+      setListMsg(e instanceof Error ? e.message : "Gagal mengubah.");
     } finally {
       setBusy(null);
     }
@@ -264,7 +288,7 @@ export default function CampaignSettings({
           <span className={label}>Judul kampanye</span>
           <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={120} className={input} />
         </label>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-3">
           <label className="block space-y-1">
             <span className={label}>Penyelenggara</span>
             <input
@@ -274,6 +298,17 @@ export default function CampaignSettings({
               placeholder="SMA Negeri 1"
               className={input}
             />
+          </label>
+          <label className="block space-y-1">
+            <span className={label}>Kategori</span>
+            <select value={category} onChange={(e) => setCategory(e.target.value)} className={input}>
+              <option value="">Tanpa kategori</option>
+              {CATEGORIES.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.label}
+                </option>
+              ))}
+            </select>
           </label>
           <label className="block space-y-1">
             <span className={label}>Warna latar</span>
@@ -358,6 +393,36 @@ export default function CampaignSettings({
           </button>
         </div>
         {statusMsg && <p className="text-xs text-down">{statusMsg}</p>}
+      </Section>
+
+      {/* ---- directory ---- */}
+      <Section
+        title="Direktori kampanye"
+        desc="Kampanye aktif tampil di beranda Bingkai supaya lebih banyak orang menemukannya. Sembunyikan kalau kampanye ini hanya untuk kalangan sendiri; tautannya tetap bekerja seperti biasa."
+      >
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-gray-1">
+            {listed ? (
+              <>
+                <span className="text-gold">●</span> Tampil di direktori
+                {closedAt && <span className="text-gray-3"> (tidak tampil selama kampanye ditutup)</span>}
+              </>
+            ) : (
+              <>
+                <span className="text-gray-2">●</span> Tersembunyi dari direktori
+              </>
+            )}
+          </p>
+          <button
+            type="button"
+            disabled={busy !== null}
+            onClick={toggleListed}
+            className="border border-line px-4 py-2 text-sm text-gray-1 hover:bg-bg-hover disabled:opacity-50"
+          >
+            {busy === "listed" ? "Memproses…" : listed ? "Sembunyikan dari direktori" : "Tampilkan di direktori"}
+          </button>
+        </div>
+        {listMsg && <p className="text-xs text-down">{listMsg}</p>}
       </Section>
 
       {/* ---- manage link ---- */}

@@ -45,12 +45,18 @@ model Campaign {
   manageKey String   @unique
   /// Campaign creators can close a campaign without deleting it.
   closedAt  DateTime?
+  /// Shown in the public campaign directory on the landing page. Opt-out: organisers
+  /// can hide their campaign in /kelola, and the admin can hide one too.
+  listed    Boolean  @default(true)
+  /// One of the directory categories in src/lib/validate.ts, or null.
+  category  String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   events Event[]
 
   @@index([createdAt])
+  @@index([listed, closedAt])
 }
 
 /// Aggregate counters only. We never store an IP, a user agent string, a cookie or
@@ -79,4 +85,67 @@ enum EventKind {
   PHOTO_PICKED
   DOWNLOAD
   SHARE
+}
+
+// ---------------------------------------------------------------- sponsors
+// Same format as Portabase Sponsors: 5 slots, bids in USDC on Solana count for 30
+// days, the top 5 totals of at least $5 show. Payments land in the wallet shared with
+// PumpBid and Portabase; only memos `BINGKAI bsp_…` and `BINGKAI TIP` are credited
+// here, so the three ledgers never mix.
+
+model Sponsor {
+  /// bsp_<16 hex>, also the payment memo suffix.
+  id           String   @id
+  name         String
+  tagline      String
+  url          String
+  /// Data URL of the resized logo (PNG, JPEG or WebP, max 200 KB).
+  logo         String
+  logoHash     String   @map("logo_hash")
+  hidden       Boolean  @default(false)
+  hiddenReason String?  @map("hidden_reason")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  bids    SponsorBid[]
+  reports SponsorReport[]
+
+  @@map("sponsors")
+}
+
+model SponsorBid {
+  /// `<tx signature>:<mint>`, so a replayed scan never double-credits.
+  signature  String   @id
+  /// bid | tip | bid_unknown_sponsor
+  kind       String
+  sponsor    Sponsor? @relation(fields: [sponsorId], references: [id], onDelete: SetNull)
+  sponsorId  String?  @map("sponsor_id")
+  fromWallet String   @map("from_wallet")
+  mint       String
+  amount     Float
+  usd        Float
+  createdAt  DateTime @map("created_at")
+
+  @@index([sponsorId, createdAt])
+  @@map("sponsor_bids")
+}
+
+/// Reporters are a salted hash of the IP; the IP itself is never stored.
+model SponsorReport {
+  sponsor   Sponsor  @relation(fields: [sponsorId], references: [id], onDelete: Cascade)
+  sponsorId String   @map("sponsor_id")
+  reporter  String
+  reason    String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@id([sponsorId, reporter])
+  @@map("sponsor_reports")
+}
+
+/// Scan lock and per-address signature cursors.
+model ScanState {
+  key       String   @id
+  value     String
+  updatedAt DateTime @default(now()) @map("updated_at")
+
+  @@map("scan_state")
 }

@@ -71,3 +71,20 @@ export function cleanFields(v: unknown): FieldSpec[] {
     };
   });
 }
+
+/** Directory categories. Stored as the id; the label is what people see. */
+export const CATEGORIES = [
+  { id: "pendidikan", label: "Pendidikan" },
+  { id: "perusahaan", label: "Perusahaan" },
+  { id: "komunitas", label: "Komunitas" },
+  { id: "keagamaan", label: "Keagamaan" },
+  { id: "pemerintah", label: "Pemerintah" },
+  { id: "olahraga", label: "Olahraga" },
+  { id: "acara", label: "Acara" },
+  { id: "lainnya", label: "Lainnya" },
+] as const;
+
+export function cleanCategory(v: unknown): string | null {
+  const s = String(v ?? "");
+  return CATEGORIES.some((c) => c.id === s) ? s : null;
+}

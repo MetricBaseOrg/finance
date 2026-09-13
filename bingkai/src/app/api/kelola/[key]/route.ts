@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { deleteByManageKey, updateByManageKey, type CampaignPatch } from "@/lib/store";
 import {
   LIMITS,
+  cleanCategory,
   cleanColor,
   cleanDimension,
   cleanFields,
@@ -43,11 +44,13 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
     patch.frameH = cleanDimension(body.frameH);
   }
   if ("closed" in body) patch.closed = Boolean(body.closed);
+  if ("listed" in body) patch.listed = Boolean(body.listed);
+  if ("category" in body) patch.category = cleanCategory(body.category);
 
   try {
     const c = await updateByManageKey(key, patch);
     if (!c) return NextResponse.json({ error: "Tautan kelola tidak dikenal." }, { status: 404 });
-    return NextResponse.json({ ok: true, closedAt: c.closedAt });
+    return NextResponse.json({ ok: true, closedAt: c.closedAt, listed: c.listed });
   } catch {
     return NextResponse.json({ error: "Gagal menyimpan. Coba lagi." }, { status: 500 });
   }

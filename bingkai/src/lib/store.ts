@@ -40,6 +40,9 @@ export type Campaign = {
   fields: FieldSpec[];
   manageKey: string;
   closedAt: string | null;
+  /** Shown in the public directory. Opt-out, so it defaults to true. */
+  listed: boolean;
+  category: string | null;
   createdAt: string;
 };
 
@@ -89,11 +92,17 @@ export function hourOf(d = new Date()) {
 // ---------------------------------------------------------------- file fallback
 const DIR = path.join(process.cwd(), ".devdata");
 const FILE = path.join(DIR, "db.json");
-type Disk = { campaigns: Campaign[]; events: Tally[] };
+type Disk = { campaigns: Campaign[]; events: (Tally & { campaignId?: string })[] };
 
 async function readDisk(): Promise<Disk> {
   try {
-    return JSON.parse(await fs.readFile(FILE, "utf8")) as Disk;
+    const d = JSON.parse(await fs.readFile(FILE, "utf8")) as Disk;
+    // Rows written before the directory existed have no listed/category.
+    for (const c of d.campaigns) {
+      c.listed ??= true;
+      c.category ??= null;
+    }
+    return d;
   } catch {
     return { campaigns: [], events: [] };
   }
@@ -111,6 +120,7 @@ type PrismaLike = {
   campaign: {
     create: (a: unknown) => Promise<unknown>;
     findUnique: (a: unknown) => Promise<unknown>;
+    findMany: (a: unknown) => Promise<unknown>;
     update: (a: unknown) => Promise<unknown>;
     delete: (a: unknown) => Promise<unknown>;
   };
@@ -118,7 +128,11 @@ type PrismaLike = {
     updateMany: (a: unknown) => Promise<{ count: number }>;
     create: (a: unknown) => Promise<unknown>;
     findMany: (a: unknown) => Promise<unknown>;
+    groupBy: (a: unknown) => Promise<unknown>;
   };
+  // Tagged templates; parameters are bound, never interpolated into the SQL text.
+  $queryRaw: <T = unknown>(q: TemplateStringsArray, ...v: unknown[]) => Promise<T>;
+  $executeRaw: (q: TemplateStringsArray, ...v: unknown[]) => Promise<number>;
 };
 
 /** pg v9 changes what sslmode=require means; pin today's behaviour explicitly. */
@@ -128,7 +142,7 @@ function pinSslMode(url: string) {
 
 const g = globalThis as unknown as { __bingkaiPrisma?: PrismaLike };
 
-async function db(): Promise<PrismaLike> {
+export async function db(): Promise<PrismaLike> {
   if (g.__bingkaiPrisma) return g.__bingkaiPrisma;
   const [{ PrismaClient }, { PrismaPg }] = await Promise.all([
     import("@/generated/prisma/client") as Promise<{
@@ -146,10 +160,13 @@ async function db(): Promise<PrismaLike> {
 
 // ---------------------------------------------------------------- operations
 export async function createCampaign(
-  c: Omit<Campaign, "id" | "manageKey" | "createdAt" | "closedAt">,
+  c: Omit<Campaign, "id" | "manageKey" | "createdAt" | "closedAt" | "listed" | "category"> &
+    Partial<Pick<Campaign, "listed" | "category">>,
 ): Promise<Campaign> {
   const row: Campaign = {
     ...c,
+    listed: c.listed ?? true,
+    category: c.category ?? null,
     id: newId(),
     manageKey: newManageKey(),
     closedAt: null,
@@ -178,6 +195,8 @@ export async function createCampaign(
       background: row.background,
       fields: row.fields,
       manageKey: row.manageKey,
+      listed: row.listed,
+      category: row.category,
     },
   });
   return row;
@@ -229,7 +248,10 @@ export async function getByManageKey(key: string): Promise<Campaign | null> {
 
 /** What an organiser may change. Slug and id never change, so shared links keep working. */
 export type CampaignPatch = Partial<
-  Pick<Campaign, "title" | "organiser" | "blurb" | "background" | "fields" | "frameData" | "frameW" | "frameH">
+  Pick<
+    Campaign,
+    "title" | "organiser" | "blurb" | "background" | "fields" | "frameData" | "frameW" | "frameH" | "listed" | "category"
+  >
 > & { closed?: boolean };
 
 /**
@@ -302,13 +324,14 @@ export async function recordEvent(
     const d = await readDisk();
     const hit = d.events.find(
       (e) =>
+        e.campaignId === campaignId &&
         e.kind === kind &&
         e.refHost === refHost &&
         e.preset === preset &&
         e.hour === hour,
     );
     if (hit) hit.count += 1;
-    else d.events.push({ kind, refHost, preset, hour, count: 1 });
+    else d.events.push({ campaignId, kind, refHost, preset, hour, count: 1 });
     await writeDisk(d);
     return;
   }
@@ -330,7 +353,8 @@ export async function recordEvent(
 export async function tallies(campaignId: string): Promise<Tally[]> {
   if (!USING_DB) {
     const d = await readDisk();
-    return d.events;
+    // Old dev rows have no campaignId; keep showing them rather than hiding history.
+    return d.events.filter((e) => !e.campaignId || e.campaignId === campaignId);
   }
   const p = await db();
   const rows = (await p.event.findMany({
@@ -348,4 +372,111 @@ export function refHostOf(referer: string | null): string | null {
   } catch {
     return null;
   }
+}
+
+// ---------------------------------------------------------------- directory
+/** What the public directory needs: no frame data, no manage key. */
+export type DirectoryEntry = {
+  slug: string;
+  title: string;
+  organiser: string | null;
+  category: string | null;
+  hasNameField: boolean;
+  shape: "square" | "portrait" | "landscape";
+  downloads: number;
+  createdAt: string;
+  /** Changes when the frame changes, so thumbnail URLs can be cached forever. */
+  version: string;
+};
+
+const shapeOf = (w: number, h: number): DirectoryEntry["shape"] =>
+  Math.abs(w - h) / Math.max(w, h) < 0.05 ? "square" : h > w ? "portrait" : "landscape";
+
+/**
+ * Every open, listed campaign. Filtering, search and sorting happen in the browser:
+ * rows are a few hundred bytes each, so this stays cheaper than a round trip per
+ * keystroke until there are thousands of campaigns.
+ */
+export async function listDirectory(limit = 500): Promise<DirectoryEntry[]> {
+  if (!USING_DB) {
+    const d = await readDisk();
+    return d.campaigns
+      .filter((c) => c.listed && !c.closedAt)
+      .slice(-limit)
+      .map((c) => ({
+        slug: c.slug,
+        title: c.title,
+        organiser: c.organiser,
+        category: c.category,
+        hasNameField: c.fields.length > 0,
+        shape: shapeOf(c.frameW, c.frameH),
+        downloads: d.events
+          .filter((e) => e.campaignId === c.id && e.kind === "DOWNLOAD")
+          .reduce((a, e) => a + e.count, 0),
+        createdAt: c.createdAt,
+        version: String(c.frameData.length),
+      }));
+  }
+  const p = await db();
+  const rows = (await p.campaign.findMany({
+    where: { listed: true, closedAt: null },
+    orderBy: { createdAt: "desc" },
+    take: limit,
+    select: {
+      id: true,
+      slug: true,
+      title: true,
+      organiser: true,
+      category: true,
+      fields: true,
+      frameW: true,
+      frameH: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+  })) as Array<{
+    id: string;
+    slug: string;
+    title: string;
+    organiser: string | null;
+    category: string | null;
+    fields: unknown;
+    frameW: number;
+    frameH: number;
+    createdAt: Date;
+    updatedAt: Date;
+  }>;
+  if (rows.length === 0) return [];
+  const sums = (await p.event.groupBy({
+    by: ["campaignId"],
+    where: { kind: "DOWNLOAD", campaignId: { in: rows.map((r) => r.id) } },
+    _sum: { count: true },
+  })) as Array<{ campaignId: string; _sum: { count: number | null } }>;
+  const downloads = new Map(sums.map((s) => [s.campaignId, s._sum.count ?? 0]));
+  return rows.map((r) => ({
+    slug: r.slug,
+    title: r.title,
+    organiser: r.organiser,
+    category: r.category,
+    hasNameField: Array.isArray(r.fields) && r.fields.length > 0,
+    shape: shapeOf(r.frameW, r.frameH),
+    downloads: downloads.get(r.id) ?? 0,
+    createdAt: r.createdAt.toISOString(),
+    version: r.updatedAt.getTime().toString(36),
+  }));
+}
+
+/** Admin moderation: hide a campaign from the directory without touching it otherwise. */
+export async function setListedBySlug(slug: string, listed: boolean): Promise<boolean> {
+  if (!USING_DB) {
+    const d = await readDisk();
+    const c = d.campaigns.find((x) => x.slug === slug);
+    if (!c) return false;
+    c.listed = listed;
+    await writeDisk(d);
+    return true;
+  }
+  const p = await db();
+  const n = await p.$executeRaw`update "Campaign" set listed = ${listed} where slug = ${slug}`;
+  return n > 0;
 }

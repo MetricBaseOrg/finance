@@ -20,6 +20,7 @@ import {
   SaveLinkActions,
   type FrameState,
 } from "@/components/FrameSetup";
+import { CATEGORIES } from "@/lib/validate";
 
 type Created = { slug: string; url: string; manageUrl: string };
 
@@ -27,6 +28,8 @@ export default function BuatPage() {
   const [title, setTitle] = useState("");
   const [organiser, setOrganiser] = useState("");
   const [blurb, setBlurb] = useState("");
+  const [category, setCategory] = useState("");
+  const [listed, setListed] = useState(true);
   const [frame, setFrame] = useState<FrameState | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
   const [fields, setFields] = useState<FieldSpec[]>([]);
@@ -54,6 +57,8 @@ export default function BuatPage() {
           frameH: frame.h,
           background,
           fields,
+          category,
+          listed,
         }),
       });
       const j = (await res.json()) as Created & { error?: string };
@@ -207,6 +212,41 @@ export default function BuatPage() {
       </div>
 
       <FieldsEditor fields={fields} setFields={setFields} hasFrame={!!frame} />
+
+      <div className="space-y-3 border border-line p-4">
+        <label className="block space-y-1">
+          <span className="font-mono text-[11px] uppercase tracking-wider text-gray-2">
+            Kategori <span className="normal-case tracking-normal text-gray-3">(opsional)</span>
+          </span>
+          <select
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            className="w-full border border-line bg-bg-elev px-3 py-2.5 text-sm outline-none focus:border-line-strong"
+          >
+            <option value="">Pilih kategori…</option>
+            {CATEGORIES.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex items-start gap-2.5 text-sm text-gray-1">
+          <input
+            type="checkbox"
+            checked={listed}
+            onChange={(e) => setListed(e.target.checked)}
+            className="mt-1 accent-[#c9a84c]"
+          />
+          <span>
+            Tampilkan di direktori kampanye Bingkai
+            <span className="block text-[12px] text-gray-3">
+              Orang bisa menemukan kampanyemu dari beranda. Hilangkan centang untuk kampanye internal; tautannya tetap
+              bisa dibagikan. Bisa diubah kapan saja di halaman kelola.
+            </span>
+          </span>
+        </label>
+      </div>
 
       {err && <p className="border border-down/40 px-3 py-2 text-xs text-down">{err}</p>}
 

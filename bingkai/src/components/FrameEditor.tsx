@@ -555,7 +555,7 @@ export default function FrameEditor({ campaign }: { campaign: EditorCampaign }) 
         <CopyLink slug={campaign.slug} title={campaign.title} />
 
         <p className="border-t border-line pt-4 text-[11px] leading-relaxed text-gray-3">
-          Tanpa watermark. Tanpa akun. Tanpa iklan. Foto kamu tidak pernah dikirim ke
+          Tanpa watermark. Tanpa akun. Foto kamu tidak pernah dikirim ke
           server mana pun — buka menu jaringan di browser dan lihat sendiri.
         </p>
       </div>

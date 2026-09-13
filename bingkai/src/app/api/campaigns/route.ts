@@ -3,6 +3,7 @@ import { createCampaign } from "@/lib/store";
 import { slugify } from "@/lib/compose";
 import {
   LIMITS,
+  cleanCategory,
   cleanColor,
   cleanDimension,
   cleanFields,
@@ -40,6 +41,9 @@ export async function POST(req: NextRequest) {
       frameH: cleanDimension(body.frameH),
       background: cleanColor(body.background, "#0a0a0a"),
       fields: cleanFields(body.fields),
+      category: cleanCategory(body.category),
+      // Opt-out: listed unless the organiser unticked it.
+      listed: body.listed !== false,
     });
     return NextResponse.json({
       slug: c.slug,

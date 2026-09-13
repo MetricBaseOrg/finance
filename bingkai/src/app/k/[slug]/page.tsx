@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getCampaign } from "@/lib/store";
 import FrameEditor from "@/components/FrameEditor";
+import { SponsorStrip } from "@/components/SponsorSlots";
+import { getBoardCached } from "@/lib/sponsor/board";
 
 export const dynamic = "force-dynamic";
 
@@ -32,7 +34,7 @@ export default async function CampaignPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const c = await getCampaign(slug);
+  const [c, board] = await Promise.all([getCampaign(slug), getBoardCached()]);
   if (!c) notFound();
 
   // manageKey is stripped here rather than in the component, so the secret is never
@@ -56,6 +58,8 @@ export default async function CampaignPage({
       </header>
 
       <FrameEditor campaign={safe} />
+
+      <SponsorStrip board={board} />
     </div>
   );
 }

@@ -34,7 +34,7 @@ export const metadata: Metadata = {
     template: "%s · Bingkai",
   },
   description:
-    "Bikin dan pakai twibbon kampanye tanpa akun, tanpa watermark, tanpa iklan. Fotomu diproses di perangkatmu sendiri dan tidak pernah dikirim ke server.",
+    "Bikin, cari, dan pakai twibbon kampanye tanpa akun dan tanpa watermark. Fotomu diproses di perangkatmu sendiri dan tidak pernah dikirim ke server.",
   applicationName: "Bingkai",
   keywords: [
     "twibbon",
@@ -67,8 +67,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </span>
             </Link>
             <nav className="flex items-center gap-5 font-mono text-[11px] uppercase tracking-wider">
-              <Link href="/#kenapa" className="text-gray-2 hover:text-gold">
-                Kenapa
+              <Link href="/#kampanye" className="text-gray-2 hover:text-gold">
+                Kampanye
+              </Link>
+              <Link href="/sponsor" className="hidden text-gray-2 hover:text-gold sm:inline">
+                Sponsor
               </Link>
               <Link
                 href="/buat"
@@ -86,6 +89,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <div className="mx-auto flex max-w-5xl flex-col gap-2 px-5 py-8 font-mono text-[11px] uppercase tracking-wider text-gray-3 sm:flex-row sm:justify-between">
             <span>Bingkai · bagian dari MetricBase</span>
             <span className="flex gap-4">
+              <Link href="/sponsor" className="hover:text-gold">Pasang iklan</Link>
+              <Link href="/#dukung" className="hover:text-gold">Dukung</Link>
               <a href="https://metricbase.org/privacy">Privasi</a>
               <a href="https://metricbase.org/terms">Ketentuan</a>
             </span>

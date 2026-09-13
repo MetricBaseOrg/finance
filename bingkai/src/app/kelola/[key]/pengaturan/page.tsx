@@ -32,6 +32,8 @@ export default async function PengaturanPage({
         frameW: c.frameW,
         frameH: c.frameH,
         closedAt: c.closedAt,
+        listed: c.listed,
+        category: c.category,
       }}
     />
   );
