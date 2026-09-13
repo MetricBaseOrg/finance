@@ -2,8 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { createCampaign, type FieldSpec } from "@/lib/store";
 import { slugify } from "@/lib/compose";
 
-/** Hard cap so a pasted 20 MB PNG fails fast with a clear message. */
-const MAX_FRAME_BYTES = 5 * 1024 * 1024;
+/**
+ * Hard cap on the decoded PNG, so an oversized frame fails fast with a clear message.
+ *
+ * 3 MB, not 5. The frame travels as base64 inside a JSON body, which inflates it by a
+ * third: a 5 MB PNG arrives as a ~6.7 MB request. Vercel rejects any function request
+ * over 4.5 MB before this handler runs, so the organiser would see a raw platform 413
+ * in English instead of the message below. 3 MB encodes to ~4.0 MB and leaves room for
+ * the other fields. A 1080x1080 transparent frame is typically well under 1.5 MB.
+ */
+const MAX_FRAME_BYTES = 3 * 1024 * 1024;
 
 export async function POST(req: NextRequest) {
   let body: Record<string, unknown>;
@@ -26,7 +34,7 @@ export async function POST(req: NextRequest) {
   const approx = Math.floor((frameData.length - frameData.indexOf(",") - 1) * 0.75);
   if (approx > MAX_FRAME_BYTES) {
     return NextResponse.json(
-      { error: "Bingkai terlalu besar. Maksimal 5 MB." },
+      { error: "Bingkai terlalu besar. Maksimal 3 MB." },
       { status: 413 },
     );
   }

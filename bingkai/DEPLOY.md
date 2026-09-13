@@ -2,8 +2,52 @@
 
 Target: `bingkai.metricbase.org`
 
-The database is **already provisioned and live** — everything below is the hosting
-half, which needs credentials this machine does not have.
+## Status, 2026-09-13: LIVE on Vercel, waiting on one DNS record
+
+| Piece | State |
+|---|---|
+| Vercel project `metricbase/bingkai`, functions pinned to **sin1** (Singapore) | Live |
+| Production env: `DATABASE_URL`, `DIRECT_URL`, `NEXT_PUBLIC_SITE_URL` | Set, encrypted |
+| Public alias | https://bingkai-seven.vercel.app |
+| End-to-end check: campaign created over HTTPS, page and API read back, row confirmed in Neon by SQL | Passed |
+| Oversize frame (3.1 MB) rejected by the app with its own 413 message | Passed |
+| `bingkai.metricbase.org` added to the project | Added, **DNS not set** |
+
+**The one remaining step** is in Cloudflare, zone `metricbase.org`:
+
+| Type | Name | Content | Proxy |
+|---|---|---|---|
+| A | `bingkai` | `76.76.21.21` | DNS only (grey cloud) |
+
+It must be DNS only. With the orange-cloud proxy on, Cloudflare terminates TLS itself
+and Vercel cannot complete its own certificate issuance. Vercel emails when it verifies.
+
+A test campaign `test-deploy-check-hapus-6ey3` exists in production from the check
+above. It is harmless and can be deleted once a real campaign exists.
+
+### Two Vercel-specific changes made for this deploy
+
+* **Frame cap lowered from 5 MB to 3 MB**, client and server. The frame travels as base64
+  inside JSON, which inflates it by a third, and Vercel rejects any function request
+  over 4.5 MB before the handler runs. A 5 MB PNG arrived as ~6.7 MB, so the organiser
+  would have seen a raw English platform 413 instead of the Indonesian message. 3 MB
+  encodes to ~4.0 MB. A 1080x1080 frame is normally well under 1.5 MB.
+* **`vercel.json` pins functions to `sin1`**, next to Neon in `aws-ap-southeast-1`. The
+  default is Washington, which would put an ocean between every request and its
+  database. The first deploy's `x-vercel-id` headers confirm `sin1`.
+* **`.vercelignore` excludes `.env`**. A CLI deploy uploads the working directory, and
+  that file holds the live Neon credentials; production reads its variables from the
+  project settings instead.
+
+Redeploy from this directory with a token in `VERCEL_TOKEN`:
+
+```powershell
+vercel deploy --prod --yes --scope metricbase --token $env:VERCEL_TOKEN
+```
+
+---
+
+The sections below are the original runbook, kept for the self-hosted path.
 
 ## Done already
 
@@ -77,8 +121,7 @@ vercel domains add bingkai.metricbase.org
 Then point the domain at Vercel in Cloudflare DNS as Vercel instructs. `output:
 "standalone"` in `next.config.ts` is harmless on Vercel — it ignores it.
 
-If you would rather I did this, a Vercel access token with deploy scope is enough and
-I can take it from there.
+This is the path that was taken. See the status section at the top.
 
 ## After it is up
 

@@ -1,0 +1,13 @@
+# Never upload local secrets with a CLI deploy. Production reads its variables from
+# the Vercel project settings, not from these files.
+.env
+.env.local
+.env.*.local
+# build output and dependencies are rebuilt on Vercel
+node_modules
+.next
+tsconfig.tsbuildinfo
+# the self-hosted path; not used on Vercel
+Dockerfile
+docker-compose.yml
+Caddyfile

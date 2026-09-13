@@ -49,8 +49,9 @@ export default function BuatPage() {
       setErr("Bingkai harus PNG dengan latar transparan.");
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
-      setErr("Berkas terlalu besar. Maksimal 5 MB.");
+    // matches MAX_FRAME_BYTES in api/campaigns/route.ts: Vercel caps request bodies at 4.5 MB
+    if (file.size > 3 * 1024 * 1024) {
+      setErr("Berkas terlalu besar. Maksimal 3 MB.");
       return;
     }
     try {
