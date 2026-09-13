@@ -112,6 +112,7 @@ type PrismaLike = {
     create: (a: unknown) => Promise<unknown>;
     findUnique: (a: unknown) => Promise<unknown>;
     update: (a: unknown) => Promise<unknown>;
+    delete: (a: unknown) => Promise<unknown>;
   };
   event: {
     updateMany: (a: unknown) => Promise<{ count: number }>;
@@ -224,6 +225,70 @@ export async function getByManageKey(key: string): Promise<Campaign | null> {
     closedAt: r.closedAt ? r.closedAt.toISOString() : null,
     createdAt: r.createdAt.toISOString(),
   };
+}
+
+/** What an organiser may change. Slug and id never change, so shared links keep working. */
+export type CampaignPatch = Partial<
+  Pick<Campaign, "title" | "organiser" | "blurb" | "background" | "fields" | "frameData" | "frameW" | "frameH">
+> & { closed?: boolean };
+
+/**
+ * Apply an organiser's edit, authorised by the manage key alone. Returns the updated
+ * campaign, or null when the key matches nothing.
+ */
+export async function updateByManageKey(key: string, patch: CampaignPatch): Promise<Campaign | null> {
+  const current = await getByManageKey(key);
+  if (!current) return null;
+  const { closed, ...fields } = patch;
+  const closedAt =
+    closed === undefined ? current.closedAt : closed ? (current.closedAt ?? new Date().toISOString()) : null;
+
+  if (!USING_DB) {
+    const d = await readDisk();
+    const i = d.campaigns.findIndex((c) => c.manageKey === key);
+    if (i < 0) return null;
+    d.campaigns[i] = { ...d.campaigns[i], ...fields, closedAt };
+    await writeDisk(d);
+    return d.campaigns[i];
+  }
+  const p = await db();
+  await p.campaign.update({
+    where: { manageKey: key },
+    data: { ...fields, closedAt: closedAt ? new Date(closedAt) : null },
+  });
+  return getByManageKey(key);
+}
+
+/** Replace a leaked manage link. The old link stops working immediately. */
+export async function rotateManageKey(key: string): Promise<string | null> {
+  if (!(await getByManageKey(key))) return null;
+  const next = newManageKey();
+  if (!USING_DB) {
+    const d = await readDisk();
+    const c = d.campaigns.find((x) => x.manageKey === key);
+    if (!c) return null;
+    c.manageKey = next;
+    await writeDisk(d);
+    return next;
+  }
+  const p = await db();
+  await p.campaign.update({ where: { manageKey: key }, data: { manageKey: next } });
+  return next;
+}
+
+/** Permanently remove a campaign and its counters (Event cascades in the schema). */
+export async function deleteByManageKey(key: string): Promise<boolean> {
+  const c = await getByManageKey(key);
+  if (!c) return false;
+  if (!USING_DB) {
+    const d = await readDisk();
+    d.campaigns = d.campaigns.filter((x) => x.manageKey !== key);
+    await writeDisk(d);
+    return true;
+  }
+  const p = await db();
+  await p.campaign.delete({ where: { manageKey: key } });
+  return true;
 }
 
 export async function recordEvent(

@@ -1,17 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createCampaign, type FieldSpec } from "@/lib/store";
+import { createCampaign } from "@/lib/store";
 import { slugify } from "@/lib/compose";
-
-/**
- * Hard cap on the decoded PNG, so an oversized frame fails fast with a clear message.
- *
- * 3 MB, not 5. The frame travels as base64 inside a JSON body, which inflates it by a
- * third: a 5 MB PNG arrives as a ~6.7 MB request. Vercel rejects any function request
- * over 4.5 MB before this handler runs, so the organiser would see a raw platform 413
- * in English instead of the message below. 3 MB encodes to ~4.0 MB and leaves room for
- * the other fields. A 1080x1080 transparent frame is typically well under 1.5 MB.
- */
-const MAX_FRAME_BYTES = 3 * 1024 * 1024;
+import {
+  LIMITS,
+  cleanColor,
+  cleanDimension,
+  cleanFields,
+  cleanText,
+  frameError,
+} from "@/lib/validate";
 
 export async function POST(req: NextRequest) {
   let body: Record<string, unknown>;
@@ -24,20 +21,8 @@ export async function POST(req: NextRequest) {
   const title = String(body.title ?? "").trim();
   const frameData = String(body.frameData ?? "");
   if (!title) return NextResponse.json({ error: "Judul wajib diisi." }, { status: 400 });
-  if (!frameData.startsWith("data:image/png")) {
-    return NextResponse.json(
-      { error: "Bingkai harus PNG transparan." },
-      { status: 400 },
-    );
-  }
-  // base64 is 4 chars per 3 bytes; estimate before we hand it to the DB.
-  const approx = Math.floor((frameData.length - frameData.indexOf(",") - 1) * 0.75);
-  if (approx > MAX_FRAME_BYTES) {
-    return NextResponse.json(
-      { error: "Bingkai terlalu besar. Maksimal 3 MB." },
-      { status: 413 },
-    );
-  }
+  const bad = frameError(frameData);
+  if (bad) return NextResponse.json({ error: bad }, { status: 400 });
 
   const wanted = slugify(String(body.slug ?? "") || title);
   // Collisions are likely on a popular title, so append a short discriminator
@@ -47,14 +32,14 @@ export async function POST(req: NextRequest) {
   try {
     const c = await createCampaign({
       slug,
-      title: title.slice(0, 120),
-      organiser: (String(body.organiser ?? "").trim() || null)?.slice(0, 80) ?? null,
-      blurb: (String(body.blurb ?? "").trim() || null)?.slice(0, 280) ?? null,
+      title: title.slice(0, LIMITS.title),
+      organiser: cleanText(body.organiser, LIMITS.organiser),
+      blurb: cleanText(body.blurb, LIMITS.blurb),
       frameData,
-      frameW: Number(body.frameW) || 1080,
-      frameH: Number(body.frameH) || 1080,
-      background: String(body.background ?? "#0a0a0a"),
-      fields: Array.isArray(body.fields) ? (body.fields as FieldSpec[]).slice(0, 6) : [],
+      frameW: cleanDimension(body.frameW),
+      frameH: cleanDimension(body.frameH),
+      background: cleanColor(body.background, "#0a0a0a"),
+      fields: cleanFields(body.fields),
     });
     return NextResponse.json({
       slug: c.slug,
