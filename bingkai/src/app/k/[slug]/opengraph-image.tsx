@@ -68,7 +68,9 @@ export default async function Image({ params }: { params: Promise<{ slug: string
               display: "flex",
               width: fw,
               height: fh,
-              background: c.background,
+              // Neutral, not the campaign background: organisers often pick a bright
+              // key colour (green screen), which reads as a broken image in a preview.
+              background: "#1f1f1f",
               border: "2px solid rgba(201,168,76,0.4)",
             }}
           >
