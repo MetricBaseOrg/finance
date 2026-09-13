@@ -10,3 +10,6 @@ next-env.d.ts
 # Matches apps/platform, which ignores /app/generated.
 /src/generated
 .vercel
+
+# brand/build_brand.py is run directly; its bytecode cache is not source
+__pycache__/
