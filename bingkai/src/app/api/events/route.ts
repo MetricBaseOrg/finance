@@ -23,7 +23,8 @@ export async function POST(req: NextRequest) {
   await recordEvent(
     c.id,
     kind,
-    refHostOf(req.headers.get("referer")),
+    // Source only means something on VIEW; the header Referer is always our own page.
+    kind === "VIEW" && typeof body.ref === "string" ? refHostOf(body.ref) : null,
     body.preset ? String(body.preset).slice(0, 24) : null,
   );
   return NextResponse.json({ ok: true });

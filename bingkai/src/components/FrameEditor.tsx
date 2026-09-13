@@ -48,7 +48,14 @@ function ping(slug: string, kind: string, preset?: string) {
     void fetch("/api/events", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ slug, kind, preset }),
+      // The request's own Referer is always this page, so the source a supporter came
+      // from has to be passed explicitly. The server reduces it to a bare host.
+      body: JSON.stringify({
+        slug,
+        kind,
+        preset,
+        ref: kind === "VIEW" ? document.referrer || null : undefined,
+      }),
       keepalive: true,
     }).catch(() => {});
   } catch {
