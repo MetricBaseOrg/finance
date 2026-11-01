@@ -91,6 +91,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <span className="flex gap-4">
               <Link href="/sponsor" className="hover:text-gold">Pasang iklan</Link>
               <Link href="/#dukung" className="hover:text-gold">Dukung</Link>
+              <a href="https://bunstudio.metricbase.org" className="hover:text-gold">Bun Studio</a>
               <a href="https://metricbase.org/privacy">Privasi</a>
               <a href="https://metricbase.org/terms">Ketentuan</a>
             </span>
